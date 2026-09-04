@@ -358,7 +358,7 @@ public class Main {
                 double surgeMultiplier = hours > 4 ? 1.5 : 1.0;
                 return hours + "h \u00d7 " + rs + "15/hr" + (surgeMultiplier > 1.0 ? " \u00d7 1.5 surge" : "") + " = " + rs + String.format("%.2f", fee);
             default:
-                return hours + "h \u00d7 " + rs + "20/hr = " + rs + String.format("%.2f", fee);
+                return hours + "h \u00d7 " + rs + "50/hr = " + rs + String.format("%.2f", fee);
         }
     }
 

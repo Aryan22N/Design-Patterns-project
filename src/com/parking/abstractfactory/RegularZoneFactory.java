@@ -12,16 +12,16 @@ import com.parking.bridge.SmallSpot;
 public class RegularZoneFactory extends ParkingSpotFactory {
     @Override
     public ParkingSpot createSmallSpot(String spotId) {
-        return new SmallSpot(spotId, new HourlyPricing(), "Regular");
+        return new SmallSpot(spotId, new HourlyPricing(50.0), "Regular");
     }
 
     @Override
     public ParkingSpot createMediumSpot(String spotId) {
-        return new MediumSpot(spotId, new HourlyPricing(), "Regular");
+        return new MediumSpot(spotId, new HourlyPricing(50.0), "Regular");
     }
 
     @Override
     public ParkingSpot createLargeSpot(String spotId) {
-        return new LargeSpot(spotId, new HourlyPricing(), "Regular");
+        return new LargeSpot(spotId, new HourlyPricing(50.0), "Regular");
     }
 }

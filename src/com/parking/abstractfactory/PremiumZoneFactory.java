@@ -11,16 +11,16 @@ import com.parking.bridge.SmallSpot;
 public class PremiumZoneFactory extends ParkingSpotFactory {
     @Override
     public ParkingSpot createSmallSpot(String spotId) {
-        return new SmallSpot(spotId, new FlatRatePricing(50.0), "Premium");
+        return new SmallSpot(spotId, new FlatRatePricing(150.0), "Premium");
     }
 
     @Override
     public ParkingSpot createMediumSpot(String spotId) {
-        return new MediumSpot(spotId, new FlatRatePricing(), "Premium");
+        return new MediumSpot(spotId, new FlatRatePricing(250.0), "Premium");
     }
 
     @Override
     public ParkingSpot createLargeSpot(String spotId) {
-        return new LargeSpot(spotId, new DynamicPricing(), "Premium");
+        return new LargeSpot(spotId, new FlatRatePricing(500.0), "Premium");
     }
 }

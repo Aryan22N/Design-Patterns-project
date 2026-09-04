@@ -77,7 +77,7 @@ public abstract class ParkingSpot {
         switch (pricingMode) {
             case "FlatRate": return "\u20b9" + (int) pricing.calcPrice(1) + "/hr";
             case "Dynamic":  return "\u20b9" + "15/hr (surge after 4h)";
-            default:         return "\u20b9" + "20/hr";
+            default:         return "\u20b9" + (int) pricing.calcPrice(1) + "/hr";
         }
     }
 

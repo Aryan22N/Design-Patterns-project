@@ -7,12 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * Data Access Object for Vehicles.
- * 
- * Vehicle objects are instantiated via Factory Method (VehicleFactory)
- * prior to being passed to VehicleDAO for persistence.
- */
+
 public class VehicleDAO {
 
     /**
