@@ -1,1100 +1,436 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartPark — Intelligent Parking System</title>
-  <meta name="description" content="An intelligent parking management system demonstrating design patterns: Factory, Singleton, Chain of Responsibility, Bridge, Proxy, and Observer." />
+  <title>SmartPark </title>
+  <meta name="description"
+    content="An intelligent parking management system demonstrating design patterns: Factory, Singleton, Chain of Responsibility, Bridge, Proxy, and Observer." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
 
-  <style>
-    /* ── Reset & tokens ───────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:          #f9fafb;
-      --surface:     #ffffff;
-      --surface2:    #f3f4f6;
-      --border:      #e5e7eb;
-      --border-glow: #d1d5db;
-      --text:        #111827;
-      --muted:       #6b7280;
-      --premium-gold:#d97706;
-      --premium-end: #b45309;
-      --regular-teal:#0284c7;
-      --regular-end: #0369a1;
-      --green:       #10b981;
-      --green-glow:  rgba(16,185,129,0.15);
-      --red:         #ef4444;
-      --red-glow:    rgba(239,68,68,0.15);
-      --blue:        #2563eb;
-      --purple:      #7c3aed;
-      --radius:      8px;
-      --shadow:      0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Header ───────────────────────────────────────────── */
-    header {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1.5rem;
-      display: flex; align-items: center; gap: 1rem;
-      height: 56px;
-    }
-    .logo { display: flex; align-items: center; gap: .5rem; }
-    .logo-icon {
-      width: 32px; height: 32px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      display: grid; place-items: center;
-      font-size: 1rem;
-    }
-    .logo-text { font-family: 'Outfit', 'Inter', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--text); }
-    .logo-sub  { font-size: .68rem; color: var(--muted); letter-spacing: .04em; font-weight: 500; }
-    .header-badge {
-      margin-left: auto;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: .2rem .6rem;
-      border-radius: 4px;
-      font-size: .72rem;
-      font-weight: 500;
-    }
-
-    /* ── Stepper ──────────────────────────────────────────── */
-    .stepper {
-      display: flex; align-items: center; justify-content: center;
-      gap: 0; padding: 1.25rem 1.5rem;
-      position: relative; z-index: 1;
-    }
-    .step-item {
-      display: flex; align-items: center; gap: .4rem;
-      font-size: .8rem; font-weight: 500;
-      color: var(--muted);
-      transition: color .2s;
-    }
-    .step-item.active  { color: var(--text); font-weight: 600; }
-    .step-item.done    { color: #059669; }
-    .step-num {
-      width: 24px; height: 24px; border-radius: 50%;
-      border: 1px solid #d1d5db;
-      background: #ffffff;
-      display: grid; place-items: center;
-      font-size: .72rem; font-weight: 600;
-      color: var(--muted);
-      transition: all .2s;
-      flex-shrink: 0;
-    }
-    .step-item.active .step-num {
-      background: #111827;
-      border-color: #111827;
-      color: #ffffff;
-      box-shadow: none;
-    }
-    .step-item.done .step-num {
-      background: #10b981;
-      border-color: #10b981;
-      color: #ffffff;
-    }
-    .step-line {
-      width: 32px; height: 1px;
-      background: #e5e7eb;
-      margin: 0 .4rem;
-      transition: background .2s;
-    }
-    .step-line.done { background: #10b981; }
-
-    /* ── Main layout ──────────────────────────────────────── */
-    main {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: .5rem 1.25rem 4rem;
-      position: relative; z-index: 1;
-    }
-
-    .screen { display: none; }
-    .screen.active { display: block; }
-
-    /* ── Cards ────────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      margin-bottom: 1rem;
-      box-shadow: var(--shadow);
-    }
-    .card-title {
-      font-family: 'Outfit', 'Inter', sans-serif;
-      font-size: 1.1rem; font-weight: 600;
-      margin-bottom: 1.25rem;
-      display: flex; align-items: center; gap: .5rem;
-      color: var(--text);
-    }
-    .card-title .icon { font-size: 1.2rem; }
-
-    /* ── Vehicle type selector ────────────────────────────── */
-    .vehicle-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem;
-      margin-bottom: 1.25rem;
-    }
-    .vehicle-card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all .15s ease;
-      user-select: none;
-    }
-    .vehicle-card:hover {
-      border-color: #9ca3af;
-      background: #f9fafb;
-    }
-    .vehicle-card.selected {
-      border-color: #111827;
-      background: #ffffff;
-      box-shadow: 0 0 0 1px #111827;
-    }
-    .vehicle-icon { font-size: 2rem; margin-bottom: .4rem; }
-    .vehicle-label { font-weight: 600; font-size: .9rem; color: var(--text); }
-    .vehicle-size { font-size: .72rem; color: var(--muted); margin-top: .2rem; }
-
-    /* ── Form elements ────────────────────────────────────── */
-    .form-group { margin-bottom: 1.25rem; }
-    .form-label {
-      display: block;
-      font-size: .78rem; font-weight: 600;
-      color: #374151;
-      text-transform: uppercase; letter-spacing: .04em;
-      margin-bottom: .4rem;
-    }
-    .form-input {
-      width: 100%;
-      background: #ffffff;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      padding: .65rem .85rem;
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: .95rem;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease;
-    }
-    .form-input:focus {
-      border-color: #111827;
-      box-shadow: 0 0 0 1px #111827;
-    }
-    .form-input::placeholder { color: #9ca3af; }
-
-    /* ── Zone selector ────────────────────────────────────── */
-    .zone-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: .85rem;
-      margin-bottom: 1.25rem;
-    }
-    .zone-card {
-      border-radius: var(--radius);
-      padding: 1.1rem;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      transition: all .15s ease;
-      position: relative;
-    }
-    .zone-card:hover { border-color: #9ca3af; }
-    .zone-card.selected { border-color: #111827; box-shadow: 0 0 0 1px #111827; }
-
-    .zone-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
-    .zone-name { font-family: 'Outfit', 'Inter', sans-serif; font-weight: 600; font-size: .95rem; color: var(--text); }
-    .zone-badge {
-      margin-left: auto;
-      font-size: .65rem; font-weight: 600; letter-spacing: .03em;
-      padding: .15rem .45rem; border-radius: 4px;
-      background: #f3f4f6; color: #374151;
-      border: 1px solid #e5e7eb;
-    }
-    .zone-badge span { color: inherit; }
-    .zone-desc { font-size: .78rem; color: var(--muted); line-height: 1.4; }
-    .zone-rates { margin-top: .6rem; display: flex; flex-direction: column; gap: .15rem; }
-    .zone-rate { font-size: .75rem; font-weight: 500; color: #374151; }
-
-    /* ── Buttons ──────────────────────────────────────────── */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
-      padding: .6rem 1.25rem;
-      border-radius: 6px;
-      font-family: 'Inter', sans-serif;
-      font-size: .88rem; font-weight: 500;
-      cursor: pointer; border: 1px solid transparent;
-      transition: all .15s ease;
-      text-decoration: none;
-    }
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-primary {
-      background: #111827;
-      color: #ffffff;
-      border-color: #111827;
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: #1f2937;
-      border-color: #1f2937;
-    }
-    .btn-success {
-      background: #059669;
-      color: #ffffff;
-      border-color: #059669;
-    }
-    .btn-success:hover:not(:disabled) { background: #047857; }
-    .btn-outline {
-      background: #ffffff;
-      border: 1px solid #d1d5db;
-      color: var(--text);
-    }
-    .btn-outline:hover:not(:disabled) { border-color: #111827; color: #111827; }
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-    }
-    .btn-ghost:hover { color: var(--text); }
-    .btn-danger {
-      background: #dc2626;
-      color: #ffffff;
-      border-color: #dc2626;
-    }
-    .btn-danger:hover:not(:disabled) { background: #b91c1c; }
-
-    .btn-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 1rem; margin-top: 1.25rem;
-    }
-
-    /* ── Spot grid ────────────────────────────────────────── */
-    .spot-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: .75rem;
-    }
-    .spot-tile {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: .85rem .65rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all .15s ease;
-      position: relative;
-    }
-    .spot-tile.available {
-      border-color: #a7f3d0;
-      background: #f0fdf4;
-    }
-    .spot-tile.available:hover {
-      border-color: #10b981;
-    }
-    .spot-tile.available.selected {
-      background: #ecfdf5;
-      border-color: #059669;
-      box-shadow: 0 0 0 1px #059669;
-    }
-    .spot-tile.occupied {
-      border-color: #fecaca;
-      background: #fef2f2;
-      opacity: .65; cursor: not-allowed;
-    }
-    .spot-id { font-family: 'JetBrains Mono', monospace; font-size: .85rem; font-weight: 600; color: #111827; }
-    .spot-type-label { font-size: .68rem; color: var(--muted); margin: .15rem 0; }
-    .spot-status-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      margin: .35rem auto 0;
-    }
-    .available .spot-status-dot { background: #10b981; }
-    .occupied  .spot-status-dot { background: #ef4444; }
-    .spot-rate { font-size: .65rem; color: var(--muted); margin-top: .25rem; }
-    .spot-zone-badge {
-      position: absolute; top: .3rem; right: .3rem;
-      font-size: .55rem; font-weight: 600;
-      padding: .05rem .3rem; border-radius: 4px;
-      text-transform: uppercase; letter-spacing: .04em;
-    }
-    .badge-premium { background: #fef3c7; color: #b45309; }
-    .badge-regular { background: #e0f2fe; color: #0369a1; }
-
-    /* ── Payment method selector ──────────────────────────── */
-    .payment-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem;
-    }
-    .payment-card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all .15s ease;
-    }
-    .payment-card:hover { border-color: #9ca3af; }
-    .payment-card.selected {
-      border-color: #111827;
-      background: #ffffff;
-      box-shadow: 0 0 0 1px #111827;
-    }
-    .payment-icon { font-size: 1.75rem; margin-bottom: .3rem; }
-    .payment-label { font-weight: 600; font-size: .85rem; color: var(--text); }
-
-    /* ── Timer screen ─────────────────────────────────────── */
-    .timer-hero {
-      text-align: center;
-      padding: 1.5rem 0 1rem;
-    }
-    .parked-badge {
-      display: inline-flex; align-items: center; gap: .4rem;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      color: #047857;
-      padding: .3rem .85rem;
-      border-radius: 20px;
-      font-size: .8rem; font-weight: 500;
-      margin-bottom: .85rem;
-    }
-    .timer-display {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 3rem; font-weight: 700;
-      color: var(--text);
-      letter-spacing: .03em;
-      margin: .4rem 0;
-    }
-    .timer-label { font-size: .78rem; color: var(--muted); }
-    .cost-live {
-      font-family: 'Inter', sans-serif;
-      font-size: 2rem; font-weight: 700;
-      color: #111827;
-      margin-top: .4rem;
-    }
-
-    /* ── Info grid ────────────────────────────────────────── */
-    .info-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: .65rem;
-    }
-    .info-item {
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: .75rem .85rem;
-    }
-    .info-key { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: .2rem; }
-    .info-val { font-weight: 600; font-size: .9rem; color: var(--text); }
-
-    /* ── Pattern log ──────────────────────────────────────── */
-    .pattern-log {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .75rem;
-      max-height: 220px;
-      overflow-y: auto;
-      color: #374151;
-    }
-    .log-header {
-      font-size: .7rem; font-weight: 600;
-      color: var(--muted); letter-spacing: .05em;
-      text-transform: uppercase; margin-bottom: .65rem;
-      display: flex; align-items: center; gap: .4rem;
-    }
-    .log-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #10b981;
-    }
-    .log-line {
-      padding: .25rem 0;
-      border-bottom: 1px solid #f1f5f9;
-      display: flex; align-items: flex-start; gap: .4rem;
-    }
-    .log-icon { flex-shrink: 0; }
-    .log-text { color: #374151; line-height: 1.4; }
-    .log-text.observer { color: #6d28d9; }
-    .log-text.gate { color: #b45309; }
-    .log-text.error { color: #dc2626; }
-
-    /* ── Fee breakdown ────────────────────────────────────── */
-    .fee-table {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 1rem;
-    }
-    .fee-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: .7rem .9rem;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: .88rem;
-    }
-    .fee-row:last-child { border-bottom: none; }
-    .fee-row.total {
-      background: #f9fafb;
-      font-weight: 600; font-size: 1rem;
-    }
-    .fee-key { color: var(--muted); }
-    .fee-val { font-weight: 600; color: var(--text); }
-    .fee-val.amount {
-      font-family: 'Inter', sans-serif;
-      font-size: 1.2rem; font-weight: 700;
-      color: #111827;
-    }
-
-    /* ── Receipt modal ────────────────────────────────────── */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; z-index: 200;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(2px);
-      align-items: center; justify-content: center;
-      padding: 1rem;
-    }
-    .modal-overlay.open { display: flex; }
-
-    .receipt-card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.75rem;
-      width: 100%; max-width: 480px;
-      max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-    }
-
-    .receipt-header { text-align: center; margin-bottom: 1.25rem; }
-    .receipt-logo {
-      font-family: 'Outfit', 'Inter', sans-serif; font-size: 1.3rem; font-weight: 700;
-      color: #111827;
-    }
-    .receipt-subtitle { font-size: .72rem; color: var(--muted); margin-top: .2rem; letter-spacing: .04em; }
-    .receipt-ticket-id {
-      display: inline-block;
-      background: #f3f4f6;
-      border: 1px solid #e5e7eb;
-      color: #374151;
-      padding: .25rem .75rem;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .75rem; font-weight: 600;
-      margin-top: .4rem;
-    }
-    .receipt-divider {
-      border: none; border-top: 1px dashed #d1d5db;
-      margin: 1rem 0;
-    }
-    .receipt-section-title {
-      font-size: .68rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .05em;
-      color: var(--muted);
-      margin-bottom: .65rem;
-    }
-    .receipt-row {
-      display: flex; justify-content: space-between;
-      padding: .35rem 0;
-      font-size: .85rem;
-    }
-    .receipt-row .rkey { color: var(--muted); }
-    .receipt-row .rval { font-weight: 600; text-align: right; max-width: 60%; color: var(--text); }
-    .receipt-amount {
-      text-align: center;
-      padding: 1rem;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      margin: .85rem 0;
-    }
-    .receipt-amount-label { font-size: .72rem; color: var(--muted); }
-    .receipt-amount-value {
-      font-family: 'Inter', sans-serif;
-      font-size: 2.2rem; font-weight: 700;
-      color: #111827;
-    }
-    .receipt-method {
-      display: inline-flex; align-items: center; gap: .35rem;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      color: #047857;
-      padding: .25rem .75rem; border-radius: 4px;
-      font-size: .78rem; font-weight: 500;
-    }
-    .receipt-obs {
-      background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: .75rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .72rem;
-    }
-    .receipt-obs-line { color: #374151; padding: .15rem 0; }
-    .receipt-actions {
-      display: flex; gap: .65rem; margin-top: 1.25rem;
-    }
-    .receipt-actions .btn { flex: 1; }
-
-    /* ── Success animation ────────────────────────────────── */
-    .success-ring {
-      width: 60px; height: 60px;
-      border-radius: 50%;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      display: grid; place-items: center;
-      font-size: 1.75rem;
-      margin: 0 auto .85rem;
-    }
-
-    /* ── Loading spinner ──────────────────────────────────── */
-    .loading-overlay {
-      display: none; position: fixed; inset: 0; z-index: 300;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(4px);
-      align-items: center; justify-content: center;
-      flex-direction: column; gap: .85rem;
-    }
-    .loading-overlay.open { display: flex; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid #e5e7eb;
-      border-top-color: #111827;
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-weight: 600; color: var(--text); }
-    .loading-sub { font-size: .78rem; color: var(--muted); }
-
-    /* ── Toast ────────────────────────────────────────────── */
-    .toast {
-      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 400;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: .75rem 1rem;
-      display: flex; align-items: center; gap: .65rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      transform: translateY(60px); opacity: 0;
-      transition: all .25s ease;
-      max-width: 360px;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.error { border-color: #fca5a5; background: #fef2f2; }
-    .toast-icon { font-size: 1.1rem; flex-shrink: 0; }
-    .toast-msg { font-size: .85rem; color: #374151; }
-
-    /* ── Empty state ──────────────────────────────────────── */
-    .empty-state {
-      text-align: center; padding: 2.5rem 1rem;
-      color: var(--muted);
-    }
-    .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
-    .empty-msg { font-size: .9rem; }
-
-    /* ── Loading spots ────────────────────────────────────── */
-    .spot-skeleton {
-      background: #f3f4f6;
-      border-radius: 6px;
-      height: 100px;
-    }
-
-    /* ── Print styles ─────────────────────────────────────── */
-    @media print {
-      body { background: #fff; color: #000; }
-      header, .stepper, .modal-overlay .receipt-actions,
-      #screen1,#screen2,#screen3,#screen4 { display: none !important; }
-      .modal-overlay { position: static; background: none; backdrop-filter: none; }
-      .receipt-card { border: none; box-shadow: none; max-height: none; }
-      .receipt-obs { background: #f5f5f5; }
-      .receipt-obs-line, .log-text { color: #333; }
-    }
-
-    /* ── Misc ─────────────────────────────────────────────── */
-    .section-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: .85rem;
-    }
-    .section-title {
-      font-family: 'Outfit', 'Inter', sans-serif; font-size: 1rem; font-weight: 600;
-    }
-    .legend { display: flex; gap: .85rem; font-size: .75rem; }
-    .legend-item { display: flex; align-items: center; gap: .3rem; color: #475569; }
-    .legend-dot { width: 7px; height: 7px; border-radius: 50%; }
-
-    .highlight-tag {
-      display: inline-block;
-      padding: .15rem .5rem; border-radius: 4px;
-      font-size: .68rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .03em;
-    }
-    .tag-premium { background: #fef3c7; color: #b45309; }
-    .tag-regular { background: #e0f2fe; color: #0369a1; }
-    .tag-compact { background: #f3e8ff; color: #6d28d9; }
-    .tag-large   { background: #dbeafe; color: #1d4ed8; }
-    .tag-ev      { background: #d1fae5; color: #047857; }
-
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
-
-    /* ── Duration picker ────────────────────────────────────────────── */
-    .duration-grid {
-      display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap;
-      margin-bottom: .5rem;
-    }
-    .dur-btn {
-      padding: .5rem 1.2rem;
-      border-radius: 6px;
-      border: 1px solid #d1d5db;
-      background: #ffffff;
-      color: #374151;
-      font-family: 'Inter', sans-serif;
-      font-size: .88rem; font-weight: 500;
-      cursor: pointer;
-      transition: all .15s ease;
-      user-select: none;
-    }
-    .dur-btn:hover {
-      border-color: #111827;
-      color: #111827;
-    }
-    .dur-btn.selected {
-      border-color: #111827;
-      background: #111827;
-      color: #ffffff;
-      box-shadow: none;
-    }
-
-    .plate-input {
-      text-transform: uppercase;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1rem;
-      letter-spacing: .08em;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
-<!-- ── Header ──────────────────────────────────────────────── -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">🚗</div>
-    <div>
-      <div class="logo-text">SmartPark</div>
-      <div class="logo-sub">INTELLIGENT PARKING SYSTEM</div>
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🚗</div>
+      <div>
+        <div class="logo-text">SmartPark</div>
+      </div>
+  </header>
+
+  <!-- ── Stepper ─────────────────────────────────────────────── -->
+  <div class="stepper" id="stepper">
+    <div class="step-item active" id="step1-item">
+      <div class="step-num">1</div>
+      <span>Vehicle</span>
     </div>
-</header>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item" id="step2-item">
+      <div class="step-num">2</div>
+      <span>Select Spot</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item" id="step3-item">
+      <div class="step-num">3</div>
+      <span>Parked</span>
+    </div>
+    <div class="step-line" id="line3"></div>
+    <div class="step-item" id="step4-item">
+      <div class="step-num">4</div>
+      <span>Payment</span>
+    </div>
+    <div class="step-line" id="line4"></div>
+    <div class="step-item" id="step5-item">
+      <div class="step-num">5</div>
+      <span>Receipt</span>
+    </div>
+  </div>
 
-<!-- ── Stepper ─────────────────────────────────────────────── -->
-<div class="stepper" id="stepper">
-  <div class="step-item active" id="step1-item">
-    <div class="step-num">1</div>
-    <span>Vehicle</span>
-  </div>
-  <div class="step-line" id="line1"></div>
-  <div class="step-item" id="step2-item">
-    <div class="step-num">2</div>
-    <span>Select Spot</span>
-  </div>
-  <div class="step-line" id="line2"></div>
-  <div class="step-item" id="step3-item">
-    <div class="step-num">3</div>
-    <span>Parked</span>
-  </div>
-  <div class="step-line" id="line3"></div>
-  <div class="step-item" id="step4-item">
-    <div class="step-num">4</div>
-    <span>Payment</span>
-  </div>
-  <div class="step-line" id="line4"></div>
-  <div class="step-item" id="step5-item">
-    <div class="step-num">5</div>
-    <span>Receipt</span>
-  </div>
-</div>
+  <main>
 
-<main>
-
-  <!-- ═══════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════════
        SCREEN 1 — Vehicle Details
   ═══════════════════════════════════════════════════════════ -->
-  <div class="screen active" id="screen1">
+    <div class="screen active" id="screen1">
 
-    <div class="card">
-      <div class="card-title"><span class="icon">🚘</span> Select Your Vehicle Type</div>
-      <div class="vehicle-grid">
-        <div class="vehicle-card selected" id="v-Bike" onclick="selectVehicle('Bike')">
-          <div class="vehicle-icon">🏍️</div>
-          <div class="vehicle-label">Bike</div>
-          <div class="vehicle-size">Size: Small · Small spots only (S-01, S-02...)</div>
+      <div class="card">
+        <div class="card-title"><span class="icon">🚘</span> Select Your Vehicle Type</div>
+        <div class="vehicle-grid">
+          <div class="vehicle-card selected" id="v-Bike" onclick="selectVehicle('Bike')">
+            <div class="vehicle-icon">🏍️</div>
+            <div class="vehicle-label">Bike</div>
+            <div class="vehicle-size">Size: Small · Small spots only (S-01, S-02...)</div>
+          </div>
+          <div class="vehicle-card" id="v-Car" onclick="selectVehicle('Car')">
+            <div class="vehicle-icon">🚗</div>
+            <div class="vehicle-label">Car</div>
+            <div class="vehicle-size">Size: Medium · Medium spots only (M-01, M-02...)</div>
+          </div>
+          <div class="vehicle-card" id="v-Truck" onclick="selectVehicle('Truck')">
+            <div class="vehicle-icon">🚛</div>
+            <div class="vehicle-label">Truck</div>
+            <div class="vehicle-size">Size: Large · Large spots only (L-01, L-02...)</div>
+          </div>
         </div>
-        <div class="vehicle-card" id="v-Car" onclick="selectVehicle('Car')">
-          <div class="vehicle-icon">🚗</div>
-          <div class="vehicle-label">Car</div>
-          <div class="vehicle-size">Size: Medium · Medium spots only (M-01, M-02...)</div>
-        </div>
-        <div class="vehicle-card" id="v-Truck" onclick="selectVehicle('Truck')">
-          <div class="vehicle-icon">🚛</div>
-          <div class="vehicle-label">Truck</div>
-          <div class="vehicle-size">Size: Large · Large spots only (L-01, L-02...)</div>
+
+        <div class="form-group">
+          <label class="form-label" for="plate-input">License Plate Number</label>
+          <input type="text" id="plate-input" class="form-input plate-input" placeholder="e.g. MH-31-AB-1234"
+            maxlength="20" oninput="this.value=this.value.toUpperCase()" />
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="plate-input">License Plate Number</label>
-        <input type="text" id="plate-input" class="form-input plate-input"
-               placeholder="e.g. MH-31-AB-1234" maxlength="20"
-               oninput="this.value=this.value.toUpperCase()" />
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><span class="icon">🏷️</span> Choose Parking Zone</div>
-      <div class="zone-grid">
-        <div class="zone-card zone-premium selected" id="zone-Premium" onclick="selectZone('Premium')">
-          <div class="zone-header">
-            <span style="font-size:1.2rem">⭐</span>
-            <span class="zone-name">Premium Zone</span>
-            <span class="zone-badge"><span>PREMIUM</span></span>
+      <div class="card">
+        <div class="card-title"><span class="icon">🏷️</span> Choose Parking Zone</div>
+        <div class="zone-grid">
+          <div class="zone-card zone-premium selected" id="zone-Premium" onclick="selectZone('Premium')">
+            <div class="zone-header">
+              <span style="font-size:1.2rem">⭐</span>
+              <span class="zone-name">Premium Zone</span>
+              <span class="zone-badge"><span>PREMIUM</span></span>
+            </div>
+            <div class="zone-desc">Priority spots with best coverage, CCTV, and EV charging.</div>
+            <div class="zone-rates">
+              <span class="zone-rate">Small (Bike) → ₹50/hr</span>
+              <span class="zone-rate">Medium (Car) → ₹100/hr</span>
+              <span class="zone-rate">Large (Truck) → ₹15/hr (surge after 4h)</span>
+            </div>
           </div>
-          <div class="zone-desc">Priority spots with best coverage, CCTV, and EV charging.</div>
-          <div class="zone-rates">
-            <span class="zone-rate">Small (Bike) → ₹50/hr</span>
-            <span class="zone-rate">Medium (Car) → ₹100/hr</span>
-            <span class="zone-rate">Large (Truck) → ₹15/hr (surge after 4h)</span>
-          </div>
-        </div>
-        <div class="zone-card zone-regular" id="zone-Regular" onclick="selectZone('Regular')">
-          <div class="zone-header">
-            <span style="font-size:1.2rem">🟢</span>
-            <span class="zone-name">Regular Zone</span>
-            <span class="zone-badge"><span>FREE</span></span>
-          </div>
-          <div class="zone-desc">Standard open-air spots with simple hourly pricing.</div>
-          <div class="zone-rates">
-            <span class="zone-rate">All types → ₹20/hr</span>
+          <div class="zone-card zone-regular" id="zone-Regular" onclick="selectZone('Regular')">
+            <div class="zone-header">
+              <span style="font-size:1.2rem">🟢</span>
+              <span class="zone-name">Regular Zone</span>
+              <span class="zone-badge"><span>FREE</span></span>
+            </div>
+            <div class="zone-desc">Standard open-air spots with simple hourly pricing.</div>
+            <div class="zone-rates">
+              <span class="zone-rate">All types → ₹20/hr</span>
+            </div>
           </div>
         </div>
       </div>
+
+      <div class="btn-row">
+        <div></div>
+        <button class="btn btn-primary" id="find-spots-btn" onclick="findSpots()">
+          🔍 Find Available Spots
+        </button>
+      </div>
     </div>
 
-    <div class="btn-row">
-      <div></div>
-      <button class="btn btn-primary" id="find-spots-btn" onclick="findSpots()">
-        🔍 Find Available Spots
-      </button>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════════
        SCREEN 2 — Spot Selection
   ═══════════════════════════════════════════════════════════ -->
-  <div class="screen" id="screen2">
-    <div class="card">
-      <div class="section-head">
-        <div>
-          <div class="card-title" style="margin-bottom:.25rem" id="spots-title">
-            🅿️ Available Spots
+    <div class="screen" id="screen2">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="card-title" style="margin-bottom:.25rem" id="spots-title">
+              🅿️ Available Spots
+            </div>
+            <div id="spots-subtitle" style="font-size:.82rem;color:var(--muted)"></div>
           </div>
-          <div id="spots-subtitle" style="font-size:.82rem;color:var(--muted)"></div>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--green)"></div>Available
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--red)"></div>Occupied
+            </div>
+          </div>
         </div>
-        <div class="legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Available</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Occupied</div>
-        </div>
+        <div class="spot-grid" id="spot-grid"></div>
       </div>
-      <div class="spot-grid" id="spot-grid"></div>
+
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goTo(1)">← Back</button>
+        <button class="btn btn-primary" id="book-btn" disabled onclick="bookSpot()">
+          🔒 Book Selected Spot
+        </button>
+      </div>
     </div>
 
-
-    <div class="btn-row">
-      <button class="btn btn-outline" onclick="goTo(1)">← Back</button>
-      <button class="btn btn-primary" id="book-btn" disabled onclick="bookSpot()">
-        🔒 Book Selected Spot
-      </button>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════════
        SCREEN 3 — Active Parking / Duration Picker
   ═════════════════════════════════════════════════════════ -->
-  <div class="screen" id="screen3">
-    <div class="card">
-      <div class="timer-hero">
-        <div class="parked-badge"><span>●</span> Vehicle Parked Successfully!</div>
+    <div class="screen" id="screen3">
+      <div class="card">
+        <div class="timer-hero">
+          <div class="parked-badge"><span>●</span> Vehicle Parked Successfully!</div>
 
-        <!-- Duration selector -->
-        <div style="margin:1.5rem 0 .5rem">
-          <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.85rem;font-weight:600">
-            ⏱️ Select Parking Duration
+          <!-- Duration selector -->
+          <div style="margin:1.5rem 0 .5rem">
+            <div
+              style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.85rem;font-weight:600">
+              ⏱️ Select Parking Duration
+            </div>
+            <div class="duration-grid" id="duration-grid">
+              <div class="dur-btn selected" id="dur-1" onclick="selectDuration(1)">1 hr</div>
+              <div class="dur-btn" id="dur-2" onclick="selectDuration(2)">2 hrs</div>
+              <div class="dur-btn" id="dur-3" onclick="selectDuration(3)">3 hrs</div>
+              <div class="dur-btn" id="dur-4" onclick="selectDuration(4)">4 hrs</div>
+              <div class="dur-btn" id="dur-5" onclick="selectDuration(5)">5 hrs</div>
+            </div>
           </div>
-          <div class="duration-grid" id="duration-grid">
-            <div class="dur-btn selected" id="dur-1" onclick="selectDuration(1)">1 hr</div>
-            <div class="dur-btn" id="dur-2" onclick="selectDuration(2)">2 hrs</div>
-            <div class="dur-btn" id="dur-3" onclick="selectDuration(3)">3 hrs</div>
-            <div class="dur-btn" id="dur-4" onclick="selectDuration(4)">4 hrs</div>
-            <div class="dur-btn" id="dur-5" onclick="selectDuration(5)">5 hrs</div>
-          </div>
+
+          <div class="timer-label">Estimated Cost</div>
+          <div class="cost-live" id="cost-live">₹0.00</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:.35rem" id="cost-breakdown-mini"></div>
         </div>
 
-        <div class="timer-label">Estimated Cost</div>
-        <div class="cost-live" id="cost-live">₹0.00</div>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.35rem" id="cost-breakdown-mini"></div>
+        <div class="info-grid" id="parking-info-grid" style="margin-top:1.25rem"></div>
       </div>
 
-      <div class="info-grid" id="parking-info-grid" style="margin-top:1.25rem"></div>
+
+      <div class="btn-row">
+        <div style="font-size:.8rem;color:var(--muted)">Duration selected will be used for final billing.</div>
+        <button class="btn btn-danger" onclick="exitParking()">🚪 Exit &amp; Pay</button>
+      </div>
     </div>
 
-
-    <div class="btn-row">
-      <div style="font-size:.8rem;color:var(--muted)">Duration selected will be used for final billing.</div>
-      <button class="btn btn-danger" onclick="exitParking()">🚪 Exit &amp; Pay</button>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════════
        SCREEN 4 — Payment
   ═══════════════════════════════════════════════════════════ -->
-  <div class="screen" id="screen4">
-    <div class="card">
-      <div class="card-title"><span class="icon">💳</span> Payment</div>
+    <div class="screen" id="screen4">
+      <div class="card">
+        <div class="card-title"><span class="icon">💳</span> Payment</div>
 
-      <div class="fee-table" id="fee-table"></div>
+        <div class="fee-table" id="fee-table"></div>
 
-      <div class="form-group" style="margin-top:1.25rem">
-        <label class="form-label">Select Payment Method</label>
-        <div class="payment-grid">
-          <div class="payment-card" id="pm-Cash" onclick="selectPayment('Cash')">
-            <div class="payment-icon">💵</div>
-            <div class="payment-label">Cash</div>
+        <div class="form-group" style="margin-top:1.25rem">
+          <label class="form-label">Select Payment Method</label>
+          <div class="payment-grid">
+            <div class="payment-card" id="pm-Cash" onclick="selectPayment('Cash')">
+              <div class="payment-icon">💵</div>
+              <div class="payment-label">Cash</div>
+            </div>
+            <div class="payment-card selected" id="pm-Card" onclick="selectPayment('Card')">
+              <div class="payment-icon">💳</div>
+              <div class="payment-label">Card</div>
+            </div>
+            <div class="payment-card" id="pm-UPI" onclick="selectPayment('UPI')">
+              <div class="payment-icon">📱</div>
+              <div class="payment-label">UPI</div>
+            </div>
           </div>
-          <div class="payment-card selected" id="pm-Card" onclick="selectPayment('Card')">
-            <div class="payment-icon">💳</div>
-            <div class="payment-label">Card</div>
-          </div>
-          <div class="payment-card" id="pm-UPI" onclick="selectPayment('UPI')">
-            <div class="payment-icon">📱</div>
-            <div class="payment-label">UPI</div>
-          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goTo(3)">← Back</button>
+        <button class="btn btn-success" id="pay-btn" onclick="processPayment()">
+          ✅ Pay Now
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+       SCREEN 5 — Receipt (shown in modal)
+  ═══════════════════════════════════════════════════════════ -->
+    <div class="screen" id="screen5">
+      <div class="card" style="text-align:center;padding:2.5rem 1.5rem">
+        <div class="success-ring">🎉</div>
+        <div style="font-family:'Outfit','Inter',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.3rem">
+          Payment Successful!</div>
+        <div style="color:var(--muted);font-size:.9rem;margin-bottom:1rem">Your receipt has been generated &amp; exit
+          gate opened.</div>
+
+        <div
+          style="background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;padding:.65rem 1.1rem;border-radius:6px;display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:.88rem;margin-bottom:1.25rem"
+          id="spot-freed-banner">
+          <span>🟢</span> Spot Freed &amp; Available for the next vehicle!
+        </div>
+
+        <div style="display:flex;gap:1rem;justify-content:center">
+          <button class="btn btn-outline" onclick="showReceipt()">🧾 View Receipt</button>
+          <button class="btn btn-primary" onclick="resetAll()">🏁 Park Another Vehicle</button>
         </div>
       </div>
     </div>
 
-    <div class="btn-row">
-      <button class="btn btn-outline" onclick="goTo(3)">← Back</button>
-      <button class="btn btn-success" id="pay-btn" onclick="processPayment()">
-        ✅ Pay Now
-      </button>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════
+     Receipt Modal
+═══════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="receipt-modal" onclick="closeReceiptOnBg(event)">
+    <div class="receipt-card" id="receipt-content">
+      <div class="receipt-header">
+        <div class="receipt-logo">🚗 SmartPark</div>
+        <div class="receipt-subtitle">OFFICIAL PARKING RECEIPT</div>
+        <div class="receipt-ticket-id" id="r-ticketId">TKT-—</div>
+      </div>
+
+      <hr class="receipt-divider" />
+
+      <div class="receipt-section-title">Vehicle &amp; Spot Details</div>
+      <div class="receipt-row"><span class="rkey">License Plate</span> <span class="rval" id="r-plate">—</span></div>
+      <div class="receipt-row"><span class="rkey">Vehicle Type</span> <span class="rval" id="r-vehicleType">—</span>
+      </div>
+      <div class="receipt-row"><span class="rkey">Zone</span> <span class="rval" id="r-zone">—</span></div>
+      <div class="receipt-row"><span class="rkey">Spot ID</span> <span class="rval" id="r-spotId">—</span></div>
+      <div class="receipt-row"><span class="rkey">Spot Type</span> <span class="rval" id="r-spotType">—</span></div>
+      <div class="receipt-row"><span class="rkey">Pricing Model</span> <span class="rval" id="r-pricing">—</span></div>
+
+      <hr class="receipt-divider" />
+
+      <div class="receipt-section-title">Timing</div>
+      <div class="receipt-row"><span class="rkey">Entry Time</span> <span class="rval" id="r-entry">—</span></div>
+      <div class="receipt-row"><span class="rkey">Exit Time</span> <span class="rval" id="r-exit">—</span></div>
+      <div class="receipt-row"><span class="rkey">Duration</span> <span class="rval" id="r-duration">—</span></div>
+
+      <hr class="receipt-divider" />
+
+      <div class="receipt-amount">
+        <div class="receipt-amount-label">Total Amount Paid</div>
+        <div class="receipt-amount-value" id="r-amount">₹0.00</div>
+        <div style="margin-top:.5rem" id="r-breakdown" style="font-size:.78rem;color:var(--muted)"></div>
+      </div>
+      <div style="text-align:center;margin-bottom:1rem">
+        <span class="receipt-method" id="r-method">💳 Card</span>
+      </div>
+
+
+      <div class="receipt-actions">
+        <button class="btn btn-outline" onclick="printReceipt()">🖨️ Print</button>
+        <button class="btn btn-primary" onclick="closeReceipt()">✕ Close</button>
+      </div>
     </div>
+  </div>
+
+  <!-- ── Loading overlay ─────────────────────────────────────── -->
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Processing…</div>
+    <div class="loading-sub" id="loading-sub">Processing request…</div>
+  </div>
+
+  <!-- ── Toast ───────────────────────────────────────────────── -->
+  <div class="toast" id="toast">
+    <div class="toast-icon" id="toast-icon">ℹ️</div>
+    <div class="toast-msg" id="toast-msg"></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       SCREEN 5 — Receipt (shown in modal)
-  ═══════════════════════════════════════════════════════════ -->
-  <div class="screen" id="screen5">
-    <div class="card" style="text-align:center;padding:2.5rem 1.5rem">
-      <div class="success-ring">🎉</div>
-      <div style="font-family:'Outfit','Inter',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.3rem">Payment Successful!</div>
-      <div style="color:var(--muted);font-size:.9rem;margin-bottom:1rem">Your receipt has been generated &amp; exit gate opened.</div>
-
-      <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;padding:.65rem 1.1rem;border-radius:6px;display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:.88rem;margin-bottom:1.25rem" id="spot-freed-banner">
-        <span>🟢</span> Spot Freed &amp; Available for the next vehicle!
-      </div>
-
-      <div style="display:flex;gap:1rem;justify-content:center">
-        <button class="btn btn-outline" onclick="showReceipt()">🧾 View Receipt</button>
-        <button class="btn btn-primary" onclick="resetAll()">🏁 Park Another Vehicle</button>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<!-- ═══════════════════════════════════════════════════════
-     Receipt Modal
-═══════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="receipt-modal" onclick="closeReceiptOnBg(event)">
-  <div class="receipt-card" id="receipt-content">
-    <div class="receipt-header">
-      <div class="receipt-logo">🚗 SmartPark</div>
-      <div class="receipt-subtitle">OFFICIAL PARKING RECEIPT</div>
-      <div class="receipt-ticket-id" id="r-ticketId">TKT-—</div>
-    </div>
-
-    <hr class="receipt-divider" />
-
-    <div class="receipt-section-title">Vehicle &amp; Spot Details</div>
-    <div class="receipt-row"><span class="rkey">License Plate</span>   <span class="rval" id="r-plate">—</span></div>
-    <div class="receipt-row"><span class="rkey">Vehicle Type</span>    <span class="rval" id="r-vehicleType">—</span></div>
-    <div class="receipt-row"><span class="rkey">Zone</span>            <span class="rval" id="r-zone">—</span></div>
-    <div class="receipt-row"><span class="rkey">Spot ID</span>         <span class="rval" id="r-spotId">—</span></div>
-    <div class="receipt-row"><span class="rkey">Spot Type</span>       <span class="rval" id="r-spotType">—</span></div>
-    <div class="receipt-row"><span class="rkey">Pricing Model</span>   <span class="rval" id="r-pricing">—</span></div>
-
-    <hr class="receipt-divider" />
-
-    <div class="receipt-section-title">Timing</div>
-    <div class="receipt-row"><span class="rkey">Entry Time</span>      <span class="rval" id="r-entry">—</span></div>
-    <div class="receipt-row"><span class="rkey">Exit Time</span>       <span class="rval" id="r-exit">—</span></div>
-    <div class="receipt-row"><span class="rkey">Duration</span>        <span class="rval" id="r-duration">—</span></div>
-
-    <hr class="receipt-divider" />
-
-    <div class="receipt-amount">
-      <div class="receipt-amount-label">Total Amount Paid</div>
-      <div class="receipt-amount-value" id="r-amount">₹0.00</div>
-      <div style="margin-top:.5rem" id="r-breakdown" style="font-size:.78rem;color:var(--muted)"></div>
-    </div>
-    <div style="text-align:center;margin-bottom:1rem">
-      <span class="receipt-method" id="r-method">💳 Card</span>
-    </div>
-
-
-    <div class="receipt-actions">
-      <button class="btn btn-outline" onclick="printReceipt()">🖨️ Print</button>
-      <button class="btn btn-primary" onclick="closeReceipt()">✕ Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Loading overlay ─────────────────────────────────────── -->
-<div class="loading-overlay" id="loading">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loading-text">Processing…</div>
-  <div class="loading-sub" id="loading-sub">Processing request…</div>
-</div>
-
-<!-- ── Toast ───────────────────────────────────────────────── -->
-<div class="toast" id="toast">
-  <div class="toast-icon" id="toast-icon">ℹ️</div>
-  <div class="toast-msg" id="toast-msg"></div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════
      JavaScript
 ═══════════════════════════════════════════════════════════ -->
-<script>
-// ── State ────────────────────────────────────────────────────
-const state = {
-  vehicleType:   'Bike',
-  plate:         '',
-  zone:          'Premium',
-  selectedSpot:  null,
-  selectedHours: 1,     // hardcoded duration for demo (1–5 hrs)
-  paymentMethod: 'Card',
-  currentStep:   1,
-  booking:       null,
-  exitData:      null,
-  receipt:       null,
-  timerInterval: null,
-  entryTime:     null,
-};
+  <script>
+    // ── State ────────────────────────────────────────────────────
+    const state = {
+      vehicleType: 'Bike',
+      plate: '',
+      zone: 'Premium',
+      selectedSpot: null,
+      selectedHours: 1,     // hardcoded duration for demo (1–5 hrs)
+      paymentMethod: 'Card',
+      currentStep: 1,
+      booking: null,
+      exitData: null,
+      receipt: null,
+      timerInterval: null,
+      entryTime: null,
+    };
 
-// ── Navigation ───────────────────────────────────────────────
-function goTo(step) {
-  document.getElementById('screen' + state.currentStep).classList.remove('active');
-  document.getElementById('screen' + step).classList.add('active');
-  state.currentStep = step;
-  updateStepper();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  // Auto-show receipt modal when reaching step 5
-  if (step === 5) setTimeout(showReceipt, 600);
-}
+    // ── Navigation ───────────────────────────────────────────────
+    function goTo(step) {
+      document.getElementById('screen' + state.currentStep).classList.remove('active');
+      document.getElementById('screen' + step).classList.add('active');
+      state.currentStep = step;
+      updateStepper();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Auto-show receipt modal when reaching step 5
+      if (step === 5) setTimeout(showReceipt, 600);
+    }
 
-function updateStepper() {
-  for (let i = 1; i <= 5; i++) {
-    const item = document.getElementById('step' + i + '-item');
-    const line = i < 5 ? document.getElementById('line' + i) : null;
-    item.className = 'step-item' +
-      (i < state.currentStep ? ' done' : '') +
-      (i === state.currentStep ? ' active' : '');
-    if (line) line.className = 'step-line' + (i < state.currentStep ? ' done' : '');
-  }
-}
+    function updateStepper() {
+      for (let i = 1; i <= 5; i++) {
+        const item = document.getElementById('step' + i + '-item');
+        const line = i < 5 ? document.getElementById('line' + i) : null;
+        item.className = 'step-item' +
+          (i < state.currentStep ? ' done' : '') +
+          (i === state.currentStep ? ' active' : '');
+        if (line) line.className = 'step-line' + (i < state.currentStep ? ' done' : '');
+      }
+    }
 
-// ── Step 1 — Vehicle selection ────────────────────────────────
-function selectVehicle(type) {
-  state.vehicleType = type;
-  ['Bike','Car','Truck'].forEach(t =>
-    document.getElementById('v-' + t).classList.toggle('selected', t === type));
-}
+    // ── Step 1 — Vehicle selection ────────────────────────────────
+    function selectVehicle(type) {
+      state.vehicleType = type;
+      ['Bike', 'Car', 'Truck'].forEach(t =>
+        document.getElementById('v-' + t).classList.toggle('selected', t === type));
+    }
 
-function selectZone(zone) {
-  state.zone = zone;
-  ['Premium','Regular'].forEach(z =>
-    document.getElementById('zone-' + z).classList.toggle('selected', z === zone));
-}
+    function selectZone(zone) {
+      state.zone = zone;
+      ['Premium', 'Regular'].forEach(z =>
+        document.getElementById('zone-' + z).classList.toggle('selected', z === zone));
+    }
 
-async function findSpots() {
-  state.plate = document.getElementById('plate-input').value.trim();
-  const plateRegex = /^[A-Z0-9 -]{4,15}$/i;
-  if (!state.plate || !plateRegex.test(state.plate)) {
-    showToast('Please enter a valid vehicle number (4–15 alphanumeric characters, e.g. MH-31-AB-1234).', true);
-    return;
-  }
+    async function findSpots() {
+      state.plate = document.getElementById('plate-input').value.trim();
+      const plateRegex = /^[A-Z0-9 -]{4,15}$/i;
+      if (!state.plate || !plateRegex.test(state.plate)) {
+        showToast('Please enter a valid vehicle number (4–15 alphanumeric characters, e.g. MH-31-AB-1234).', true);
+        return;
+      }
 
-  showLoading('Querying backend…', 'Filtering spots by vehicle size & zone');
-  try {
-    const res  = await fetch(`/api/spots?vehicleType=${state.vehicleType}&zone=${state.zone}`);
-    const data = await res.json();
-    hideLoading();
-    renderSpotGrid(data);
-    goTo(2);
-  } catch (e) {
-    hideLoading();
-    showToast('Could not reach backend: ' + e.message, true);
-  }
-}
+      showLoading('Querying backend…', 'Filtering spots by vehicle size & zone');
+      try {
+        const res = await fetch(`/api/spots?vehicleType=${state.vehicleType}&zone=${state.zone}`);
+        const data = await res.json();
+        hideLoading();
+        renderSpotGrid(data);
+        goTo(2);
+      } catch (e) {
+        hideLoading();
+        showToast('Could not reach backend: ' + e.message, true);
+      }
+    }
 
-// ── Step 2 — Spot grid ────────────────────────────────────────
-// In-memory map of spotId → spot data (avoids JSON.stringify in onclick attributes)
-const spotDataMap = {};
+    // ── Step 2 — Spot grid ────────────────────────────────────────
+    // In-memory map of spotId → spot data (avoids JSON.stringify in onclick attributes)
+    const spotDataMap = {};
 
-function renderSpotGrid(data) {
-  const grid  = document.getElementById('spot-grid');
-  const title = document.getElementById('spots-title');
-  const sub   = document.getElementById('spots-subtitle');
+    function renderSpotGrid(data) {
+      const grid = document.getElementById('spot-grid');
+      const title = document.getElementById('spots-title');
+      const sub = document.getElementById('spots-subtitle');
 
-  const vIcon = { Bike:'🏍️', Car:'🚗', Truck:'🚛' }[state.vehicleType] || '🚗';
-  title.innerHTML = `🅿️ Spots for ${vIcon} ${state.vehicleType} — ${state.zone} Zone`;
+      const vIcon = { Bike: '🏍️', Car: '🚗', Truck: '🚛' }[state.vehicleType] || '🚗';
+      title.innerHTML = `🅿️ Spots for ${vIcon} ${state.vehicleType} — ${state.zone} Zone`;
 
-  const eligible = data.eligibleSpots || [];
-  const available = eligible.filter(s => s.available).length;
-  sub.textContent = `${available} available of ${eligible.length} eligible spots`;
+      const eligible = data.eligibleSpots || [];
+      const available = eligible.filter(s => s.available).length;
+      sub.textContent = `${available} available of ${eligible.length} eligible spots`;
 
-  if (!eligible.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      if (!eligible.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
       <div class="empty-icon">🔍</div>
       <div class="empty-msg">No spots match your vehicle type and zone selection.</div>
     </div>`;
-    return;
-  }
+        return;
+      }
 
-  // Store all spot data in the lookup map
-  eligible.forEach(s => { spotDataMap[s.spotId] = s; });
+      // Store all spot data in the lookup map
+      eligible.forEach(s => { spotDataMap[s.spotId] = s; });
 
-  grid.innerHTML = eligible.map(s => {
-    const cls     = s.available ? 'available' : 'occupied';
-    const badge   = s.zone === 'Premium' ? 'badge-premium' : 'badge-regular';
-    const typeTag = { Small:'🔵', Medium:'🟢', Large:'🟠' }[s.spotType] || '⬜';
-    // Pass only the safe spotId string — no JSON.stringify in HTML
-    const click   = s.available ? `selectSpot('${s.spotId}')` : '';
-    return `
+      grid.innerHTML = eligible.map(s => {
+        const cls = s.available ? 'available' : 'occupied';
+        const badge = s.zone === 'Premium' ? 'badge-premium' : 'badge-regular';
+        const typeTag = { Small: '🔵', Medium: '🟢', Large: '🟠' }[s.spotType] || '⬜';
+        // Pass only the safe spotId string — no JSON.stringify in HTML
+        const click = s.available ? `selectSpot('${s.spotId}')` : '';
+        return `
       <div class="spot-tile ${cls}" id="spot-${s.spotId}" onclick="${click}">
         <span class="spot-zone-badge ${badge}">${s.zone[0]}</span>
         <div class="spot-id">${s.spotId}</div>
@@ -1102,308 +438,309 @@ function renderSpotGrid(data) {
         <div class="spot-status-dot"></div>
         <div class="spot-rate">${s.available ? s.rate : 'OCCUPIED'}</div>
       </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-function selectSpot(spotId) {
-  const spot = spotDataMap[spotId];
-  if (!spot || !spot.available) return;
-  // Deselect previous
-  if (state.selectedSpot) {
-    const prev = document.getElementById('spot-' + state.selectedSpot.spotId);
-    if (prev) prev.classList.remove('selected');
-  }
-  state.selectedSpot = spot;
-  const el = document.getElementById('spot-' + spot.spotId);
-  if (el) el.classList.add('selected');
-  document.getElementById('book-btn').disabled = false;
-}
+    function selectSpot(spotId) {
+      const spot = spotDataMap[spotId];
+      if (!spot || !spot.available) return;
+      // Deselect previous
+      if (state.selectedSpot) {
+        const prev = document.getElementById('spot-' + state.selectedSpot.spotId);
+        if (prev) prev.classList.remove('selected');
+      }
+      state.selectedSpot = spot;
+      const el = document.getElementById('spot-' + spot.spotId);
+      if (el) el.classList.add('selected');
+      document.getElementById('book-btn').disabled = false;
+    }
 
-// ── Book a spot ───────────────────────────────────────────────
-async function bookSpot() {
-  if (!state.selectedSpot) return;
+    // ── Book a spot ───────────────────────────────────────────────
+    async function bookSpot() {
+      if (!state.selectedSpot) return;
 
-  showLoading('Booking spot…', 'Verifying availability & authorizing entry…');
-  try {
-    const res = await fetch('/api/book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        vehicleType:   state.vehicleType,
-        plate:         state.plate,
-        zone:          state.zone,
-        spotId:        state.selectedSpot.spotId,
-        spotType:      state.selectedSpot.spotType,
-        paymentMethod: state.paymentMethod,
-      }),
-    });
-    const data = await res.json();
-    hideLoading();
+      showLoading('Booking spot…', 'Verifying availability & authorizing entry…');
+      try {
+        const res = await fetch('/api/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicleType: state.vehicleType,
+            plate: state.plate,
+            zone: state.zone,
+            spotId: state.selectedSpot.spotId,
+            spotType: state.selectedSpot.spotType,
+            paymentMethod: state.paymentMethod,
+          }),
+        });
+        const data = await res.json();
+        hideLoading();
 
-    if (data.status === 'ERROR') { showToast(data.message, true); return; }
+        if (data.status === 'ERROR') { showToast(data.message, true); return; }
 
-    state.booking     = data;
-    state.entryTime   = new Date();
-    state.selectedHours = 1;  // reset to 1 hr on new booking
+        state.booking = data;
+        state.entryTime = new Date();
+        state.selectedHours = 1;  // reset to 1 hr on new booking
 
-    buildTimerScreen(data);
-    goTo(3);
-  } catch (e) {
-    hideLoading();
-    showToast('Booking failed: ' + e.message, true);
-  }
-}
+        buildTimerScreen(data);
+        goTo(3);
+      } catch (e) {
+        hideLoading();
+        showToast('Booking failed: ' + e.message, true);
+      }
+    }
 
-// ── Step 3 — Duration picker (replaces live timer for demo) ──────────────────
-function buildTimerScreen(booking) {
-  // Info grid
-  const grid = document.getElementById('parking-info-grid');
-  const b = booking;
-  grid.innerHTML = [
-    ['Ticket ID',    `<code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">${b.ticketId}</code>`],
-    ['License Plate', b.plate],
-    ['Vehicle',       b.vehicleType],
-    ['Spot',          `${b.spotId} — ${b.spotType}`],
-    ['Zone',          b.zone === 'Premium' ? '⭐ Premium' : '🟢 Regular'],
-    ['Pricing',       b.rateDescription || b.pricingMode],
-  ].map(([k, v]) => `
+    // ── Step 3 — Duration picker (replaces live timer for demo) ──────────────────
+    function buildTimerScreen(booking) {
+      // Info grid
+      const grid = document.getElementById('parking-info-grid');
+      const b = booking;
+      grid.innerHTML = [
+        ['Ticket ID', `<code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">${b.ticketId}</code>`],
+        ['License Plate', b.plate],
+        ['Vehicle', b.vehicleType],
+        ['Spot', `${b.spotId} — ${b.spotType}`],
+        ['Zone', b.zone === 'Premium' ? '⭐ Premium' : '🟢 Regular'],
+        ['Pricing', b.rateDescription || b.pricingMode],
+      ].map(([k, v]) => `
     <div class="info-item">
       <div class="info-key">${k}</div>
       <div class="info-val">${v}</div>
     </div>`).join('');
 
-  // Set default duration to 1 hr and update estimate
-  selectDuration(1);
-}
+      // Set default duration to 1 hr and update estimate
+      selectDuration(1);
+    }
 
-function selectDuration(hrs) {
-  state.selectedHours = hrs;
-  // Highlight selected button
-  for (let i = 1; i <= 5; i++) {
-    const btn = document.getElementById('dur-' + i);
-    if (btn) btn.classList.toggle('selected', i === hrs);
-  }
-  // Update live estimate
-  const mode = state.booking?.pricingMode || 'Hourly';
-  const fee  = calcEstimate(mode, hrs);
-  document.getElementById('cost-live').textContent = `₹${fee.toFixed(2)}`;
-  // Show breakdown mini-text
-  const bd = buildBreakdownMini(mode, hrs, fee);
-  const mini = document.getElementById('cost-breakdown-mini');
-  if (mini) mini.textContent = bd;
-}
+    function selectDuration(hrs) {
+      state.selectedHours = hrs;
+      // Highlight selected button
+      for (let i = 1; i <= 5; i++) {
+        const btn = document.getElementById('dur-' + i);
+        if (btn) btn.classList.toggle('selected', i === hrs);
+      }
+      // Update live estimate
+      const mode = state.booking?.pricingMode || 'Hourly';
+      const fee = calcEstimate(mode, hrs);
+      document.getElementById('cost-live').textContent = `₹${fee.toFixed(2)}`;
+      // Show breakdown mini-text
+      const bd = buildBreakdownMini(mode, hrs, fee);
+      const mini = document.getElementById('cost-breakdown-mini');
+      if (mini) mini.textContent = bd;
+    }
 
-function buildBreakdownMini(mode, hrs, fee) {
-  if (mode === 'FlatRate') {
-    const rd = state.booking?.rateDescription || '';
-    const match = rd.match(/[\d]+/);
-    const ratePerHr = match ? parseFloat(match[0]) : 50;
-    return `${hrs}h × ₹${ratePerHr}/hr = ₹${fee.toFixed(2)}`;
-  }
-  if (mode === 'Dynamic') {
-    const surge = hrs > 4 ? 1.5 : 1.0;
-    return `${hrs}h × ₹15/hr${surge > 1 ? ' × 1.5× surge (>4h)' : ''} = ₹${fee.toFixed(2)}`;
-  }
-  return `${hrs}h × ₹20/hr = ₹${fee.toFixed(2)}`;
-}
+    function buildBreakdownMini(mode, hrs, fee) {
+      if (mode === 'FlatRate') {
+        const rd = state.booking?.rateDescription || '';
+        const match = rd.match(/[\d]+/);
+        const ratePerHr = match ? parseFloat(match[0]) : 50;
+        return `${hrs}h × ₹${ratePerHr}/hr = ₹${fee.toFixed(2)}`;
+      }
+      if (mode === 'Dynamic') {
+        const surge = hrs > 4 ? 1.5 : 1.0;
+        return `${hrs}h × ₹15/hr${surge > 1 ? ' × 1.5× surge (>4h)' : ''} = ₹${fee.toFixed(2)}`;
+      }
+      return `${hrs}h × ₹20/hr = ₹${fee.toFixed(2)}`;
+    }
 
-// startTimer / updateTimer removed — replaced by duration picker for demo
+    // startTimer / updateTimer removed — replaced by duration picker for demo
 
-function calcEstimate(mode, hours) {
-  if (mode === 'FlatRate') {
-    // Extract per-hour rate from rateDescription e.g. "₹50/hr" → 50
-    const rd = state.booking?.rateDescription || '';
-    const match = rd.match(/[\d]+/);
-    const ratePerHr = match ? parseFloat(match[0]) : 50;
-    return ratePerHr * Math.max(hours, 1);
-  }
-  if (mode === 'Dynamic') {
-    const surge = hours > 4 ? 1.5 : 1.0;
-    return hours * 15 * surge;
-  }
-  return hours * 20;
-}
+    function calcEstimate(mode, hours) {
+      if (mode === 'FlatRate') {
+        // Extract per-hour rate from rateDescription e.g. "₹50/hr" → 50
+        const rd = state.booking?.rateDescription || '';
+        const match = rd.match(/[\d]+/);
+        const ratePerHr = match ? parseFloat(match[0]) : 50;
+        return ratePerHr * Math.max(hours, 1);
+      }
+      if (mode === 'Dynamic') {
+        const surge = hours > 4 ? 1.5 : 1.0;
+        return hours * 15 * surge;
+      }
+      return hours * 20;
+    }
 
-// ── Step 4 — Exit & compute fee ───────────────────────────────
-async function exitParking() {
-  // Use the duration picker value — no real-time timer needed for demo
-  const hours = state.selectedHours || 1;
+    // ── Step 4 — Exit & compute fee ───────────────────────────────
+    async function exitParking() {
+      // Use the duration picker value — no real-time timer needed for demo
+      const hours = state.selectedHours || 1;
 
-  showLoading('Computing fee…', 'Calculating parking duration & rates…');
-  try {
-    const res = await fetch('/api/exit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId: state.booking.ticketId, hoursParked: hours }),
-    });
-    const data = await res.json();
-    hideLoading();
-    if (data.status === 'ERROR') { showToast(data.message, true); return; }
+      showLoading('Computing fee…', 'Calculating parking duration & rates…');
+      try {
+        const res = await fetch('/api/exit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticketId: state.booking.ticketId, hoursParked: hours }),
+        });
+        const data = await res.json();
+        hideLoading();
+        if (data.status === 'ERROR') { showToast(data.message, true); return; }
 
-    state.exitData = { ...data, hoursParked: hours };
-    buildPaymentScreen(data, hours);
-    goTo(4);
-  } catch (e) {
-    hideLoading();
-    showToast('Exit failed: ' + e.message, true);
-  }
-}
+        state.exitData = { ...data, hoursParked: hours };
+        buildPaymentScreen(data, hours);
+        goTo(4);
+      } catch (e) {
+        hideLoading();
+        showToast('Exit failed: ' + e.message, true);
+      }
+    }
 
-// ── Step 4 — Payment screen ───────────────────────────────────
-function buildPaymentScreen(exitData, hours) {
-  const b    = state.booking;
-  const fee  = exitData.totalFee || 0;
-  const bkdn = exitData.feeBreakdown || '';
+    // ── Step 4 — Payment screen ───────────────────────────────────
+    function buildPaymentScreen(exitData, hours) {
+      const b = state.booking;
+      const fee = exitData.totalFee || 0;
+      const bkdn = exitData.feeBreakdown || '';
 
-  const payBtn = document.getElementById('pay-btn');
-  payBtn.textContent = `✅ Pay ₹${fee.toFixed(2)} Now`;
+      const payBtn = document.getElementById('pay-btn');
+      payBtn.textContent = `✅ Pay ₹${fee.toFixed(2)} Now`;
 
-  const tbl = document.getElementById('fee-table');
-  tbl.innerHTML = [
-    ['Vehicle',        `${b.vehicleType} (${b.plate})`],
-    ['Spot',           `${b.spotId} — ${b.spotType}`],
-    ['Zone',           b.zone],
-    ['Pricing Model',  exitData.pricingMode || b.pricingMode],
-    ['Duration',       `${hours} hour${hours !== 1 ? 's' : ''}`],
-    ['Fee Breakdown',  bkdn],
-    ['TOTAL DUE',      `<span class="fee-val amount">₹${fee.toFixed(2)}</span>`],
-  ].map(([k, v], i) => `
+      const tbl = document.getElementById('fee-table');
+      tbl.innerHTML = [
+        ['Vehicle', `${b.vehicleType} (${b.plate})`],
+        ['Spot', `${b.spotId} — ${b.spotType}`],
+        ['Zone', b.zone],
+        ['Pricing Model', exitData.pricingMode || b.pricingMode],
+        ['Duration', `${hours} hour${hours !== 1 ? 's' : ''}`],
+        ['Fee Breakdown', bkdn],
+        ['TOTAL DUE', `<span class="fee-val amount">₹${fee.toFixed(2)}</span>`],
+      ].map(([k, v], i) => `
     <div class="fee-row ${i === 6 ? 'total' : ''}">
       <span class="fee-key">${k}</span>
       <span class="fee-val">${v}</span>
     </div>`).join('');
-}
+    }
 
-function selectPayment(method) {
-  state.paymentMethod = method;
-  ['Cash','Card','UPI'].forEach(m =>
-    document.getElementById('pm-' + m).classList.toggle('selected', m === method));
-}
+    function selectPayment(method) {
+      state.paymentMethod = method;
+      ['Cash', 'Card', 'UPI'].forEach(m =>
+        document.getElementById('pm-' + m).classList.toggle('selected', m === method));
+    }
 
-// ── Step 5 — Process payment ──────────────────────────────────
-async function processPayment() {
-  const hours = state.exitData?.hoursParked || 1;
+    // ── Step 5 — Process payment ──────────────────────────────────
+    async function processPayment() {
+      const hours = state.exitData?.hoursParked || 1;
 
-  showLoading('Processing payment…', `Processing payment via ${state.paymentMethod}…`);
-  try {
-    const res = await fetch('/api/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ticketId:      state.booking.ticketId,
-        paymentMethod: state.paymentMethod,
-        hoursParked:   hours,
-      }),
-    });
-    const data = await res.json();
-    hideLoading();
-    if (data.status === 'ERROR') { showToast(data.message, true); return; }
+      showLoading('Processing payment…', `Processing payment via ${state.paymentMethod}…`);
+      try {
+        const res = await fetch('/api/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: state.booking.ticketId,
+            paymentMethod: state.paymentMethod,
+            hoursParked: hours,
+          }),
+        });
+        const data = await res.json();
+        hideLoading();
+        if (data.status === 'ERROR') { showToast(data.message, true); return; }
 
-    state.receipt = data;
-    buildReceipt(data, hours);
-    goTo(5);
-  } catch (e) {
-    hideLoading();
-    showToast('Payment failed: ' + e.message, true);
-  }
-}
+        state.receipt = data;
+        buildReceipt(data, hours);
+        goTo(5);
+      } catch (e) {
+        hideLoading();
+        showToast('Payment failed: ' + e.message, true);
+      }
+    }
 
-// ── Receipt ───────────────────────────────────────────────────
-function buildReceipt(data, hours) {
-  const b    = state.booking;
-  const fee  = data.totalFee || 0;
-  const now  = new Date();
-  const fmtDt = d => d ? new Date(d).toLocaleString('en-IN') : now.toLocaleString('en-IN');
-  const sid  = data.spotId || b?.spotId || 'Spot';
+    // ── Receipt ───────────────────────────────────────────────────
+    function buildReceipt(data, hours) {
+      const b = state.booking;
+      const fee = data.totalFee || 0;
+      const now = new Date();
+      const fmtDt = d => d ? new Date(d).toLocaleString('en-IN') : now.toLocaleString('en-IN');
+      const sid = data.spotId || b?.spotId || 'Spot';
 
-  const banner = document.getElementById('spot-freed-banner');
-  if (banner) {
-    banner.innerHTML = `<span>🟢</span> Spot <strong>${sid}</strong> has been <strong>FREED</strong> &amp; is available for another vehicle!`;
-  }
+      const banner = document.getElementById('spot-freed-banner');
+      if (banner) {
+        banner.innerHTML = `<span>🟢</span> Spot <strong>${sid}</strong> has been <strong>FREED</strong> &amp; is available for another vehicle!`;
+      }
 
-  document.getElementById('r-ticketId').textContent     = data.ticketId || b.ticketId;
-  document.getElementById('r-plate').textContent        = data.plate || b.plate;
-  document.getElementById('r-vehicleType').textContent  = data.vehicleType || b.vehicleType;
-  document.getElementById('r-zone').innerHTML           = (data.zone || b.zone) === 'Premium'
-    ? '<span class="highlight-tag tag-premium">⭐ Premium</span>'
-    : '<span class="highlight-tag tag-regular">🟢 Regular</span>';
-  document.getElementById('r-spotId').textContent       = sid;
-  document.getElementById('r-spotType').innerHTML       = `<span class="highlight-tag tag-${(data.spotType||b.spotType).toLowerCase()}">${data.spotType||b.spotType}</span>`;
-  document.getElementById('r-pricing').textContent      = data.pricingMode || b.pricingMode;
-  document.getElementById('r-entry').textContent        = fmtDt(data.entryTime || b.entryTime);
-  document.getElementById('r-exit').textContent         = fmtDt(null);
-  document.getElementById('r-duration').textContent     = `${hours} hour${hours !== 1 ? 's' : ''}`;
-  document.getElementById('r-amount').textContent       = `₹${fee.toFixed(2)}`;
-  document.getElementById('r-breakdown').textContent    = data.feeBreakdown || '';
+      document.getElementById('r-ticketId').textContent = data.ticketId || b.ticketId;
+      document.getElementById('r-plate').textContent = data.plate || b.plate;
+      document.getElementById('r-vehicleType').textContent = data.vehicleType || b.vehicleType;
+      document.getElementById('r-zone').innerHTML = (data.zone || b.zone) === 'Premium'
+        ? '<span class="highlight-tag tag-premium">⭐ Premium</span>'
+        : '<span class="highlight-tag tag-regular">🟢 Regular</span>';
+      document.getElementById('r-spotId').textContent = sid;
+      document.getElementById('r-spotType').innerHTML = `<span class="highlight-tag tag-${(data.spotType || b.spotType).toLowerCase()}">${data.spotType || b.spotType}</span>`;
+      document.getElementById('r-pricing').textContent = data.pricingMode || b.pricingMode;
+      document.getElementById('r-entry').textContent = fmtDt(data.entryTime || b.entryTime);
+      document.getElementById('r-exit').textContent = fmtDt(null);
+      document.getElementById('r-duration').textContent = `${hours} hour${hours !== 1 ? 's' : ''}`;
+      document.getElementById('r-amount').textContent = `₹${fee.toFixed(2)}`;
+      document.getElementById('r-breakdown').textContent = data.feeBreakdown || '';
 
-  const icons = { Cash:'💵', Card:'💳', UPI:'📱' };
-  const pm = data.paymentMethod || state.paymentMethod;
-  document.getElementById('r-method').textContent = `${icons[pm] || '💳'} ${pm}`;
+      const icons = { Cash: '💵', Card: '💳', UPI: '📱' };
+      const pm = data.paymentMethod || state.paymentMethod;
+      document.getElementById('r-method').textContent = `${icons[pm] || '💳'} ${pm}`;
 
-  const obs = document.getElementById('r-observers');
-  if (obs) {
-    obs.innerHTML = (data.observerLog || []).map(l =>
-      `<div class="receipt-obs-line">📡 ${l}</div>`).join('')
-      || '<div class="receipt-obs-line" style="color:var(--muted)">No observer data available</div>';
-  }
-}
+      const obs = document.getElementById('r-observers');
+      if (obs) {
+        obs.innerHTML = (data.observerLog || []).map(l =>
+          `<div class="receipt-obs-line">📡 ${l}</div>`).join('')
+          || '<div class="receipt-obs-line" style="color:var(--muted)">No observer data available</div>';
+      }
+    }
 
-function showReceipt()  { document.getElementById('receipt-modal').classList.add('open'); }
-function closeReceipt() { document.getElementById('receipt-modal').classList.remove('open'); }
-function closeReceiptOnBg(e) {
-  if (e.target === document.getElementById('receipt-modal')) closeReceipt();
-}
-function printReceipt() { window.print(); }
+    function showReceipt() { document.getElementById('receipt-modal').classList.add('open'); }
+    function closeReceipt() { document.getElementById('receipt-modal').classList.remove('open'); }
+    function closeReceiptOnBg(e) {
+      if (e.target === document.getElementById('receipt-modal')) closeReceipt();
+    }
+    function printReceipt() { window.print(); }
 
-// (receipt auto-show is handled directly inside goTo above)
+    // (receipt auto-show is handled directly inside goTo above)
 
-// ── Reset ─────────────────────────────────────────────────────
-function resetAll() {
-  const freedSpot = state.booking?.spotId || state.selectedSpot?.spotId || '';
-  clearInterval(state.timerInterval);
-  Object.assign(state, {
-    vehicleType:'Bike', plate:'', zone:'Premium',
-    selectedSpot:null, selectedHours:1, paymentMethod:'Card',
-    currentStep:1, booking:null, exitData:null, receipt:null,
-    timerInterval:null, entryTime:null,
-  });
-  document.getElementById('plate-input').value = '';
-  ['Bike','Car','Truck'].forEach(t =>
-    document.getElementById('v-' + t).classList.toggle('selected', t === 'Bike'));
-  ['Premium','Regular'].forEach(z =>
-    document.getElementById('zone-' + z).classList.toggle('selected', z === 'Premium'));
-  selectPayment('Card');
-  closeReceipt();
-  // Use the original goTo to avoid receipt flash
-  document.getElementById('screen' + state.currentStep).classList.remove('active');
-  state.currentStep = 1;
-  document.getElementById('screen1').classList.add('active');
-  updateStepper();
+    // ── Reset ─────────────────────────────────────────────────────
+    function resetAll() {
+      const freedSpot = state.booking?.spotId || state.selectedSpot?.spotId || '';
+      clearInterval(state.timerInterval);
+      Object.assign(state, {
+        vehicleType: 'Bike', plate: '', zone: 'Premium',
+        selectedSpot: null, selectedHours: 1, paymentMethod: 'Card',
+        currentStep: 1, booking: null, exitData: null, receipt: null,
+        timerInterval: null, entryTime: null,
+      });
+      document.getElementById('plate-input').value = '';
+      ['Bike', 'Car', 'Truck'].forEach(t =>
+        document.getElementById('v-' + t).classList.toggle('selected', t === 'Bike'));
+      ['Premium', 'Regular'].forEach(z =>
+        document.getElementById('zone-' + z).classList.toggle('selected', z === 'Premium'));
+      selectPayment('Card');
+      closeReceipt();
+      // Use the original goTo to avoid receipt flash
+      document.getElementById('screen' + state.currentStep).classList.remove('active');
+      state.currentStep = 1;
+      document.getElementById('screen1').classList.add('active');
+      updateStepper();
 
-  if (freedSpot) {
-    showToast(`Spot ${freedSpot} is now freed! You can park another vehicle.`);
-  }
-}
+      if (freedSpot) {
+        showToast(`Spot ${freedSpot} is now freed! You can park another vehicle.`);
+      }
+    }
 
-// ── Loading / Toast helpers ───────────────────────────────────
-function showLoading(text, sub) {
-  document.getElementById('loading-text').textContent = text;
-  document.getElementById('loading-sub').textContent  = sub;
-  document.getElementById('loading').classList.add('open');
-}
-function hideLoading() {
-  document.getElementById('loading').classList.remove('open');
-}
+    // ── Loading / Toast helpers ───────────────────────────────────
+    function showLoading(text, sub) {
+      document.getElementById('loading-text').textContent = text;
+      document.getElementById('loading-sub').textContent = sub;
+      document.getElementById('loading').classList.add('open');
+    }
+    function hideLoading() {
+      document.getElementById('loading').classList.remove('open');
+    }
 
-let toastTimeout;
-function showToast(msg, isError = false) {
-  const toast = document.getElementById('toast');
-  document.getElementById('toast-icon').textContent = isError ? '⚠️' : 'ℹ️';
-  document.getElementById('toast-msg').textContent  = msg;
-  toast.className = 'toast show' + (isError ? ' error' : '');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => { toast.className = 'toast'; }, 4000);
-}
-</script>
+    let toastTimeout;
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-icon').textContent = isError ? '⚠️' : 'ℹ️';
+      document.getElementById('toast-msg').textContent = msg;
+      toast.className = 'toast show' + (isError ? ' error' : '');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { toast.className = 'toast'; }, 4000);
+    }
+  </script>
 </body>
+
 </html>
