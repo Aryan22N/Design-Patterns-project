@@ -188,6 +188,11 @@ app.get('/api/spots', (req, res) => {
 app.post('/api/book', async (req, res) => {
   const { vehicleType, plate, zone, spotId, spotType, paymentMethod } = req.body;
 
+  // Validate vehicle number format
+  if (!plate || !/^[A-Z0-9 -]{4,15}$/i.test(plate.trim())) {
+    return res.status(400).json({ status: 'ERROR', message: 'Invalid vehicle number format. Must be 4-15 alphanumeric characters (e.g. MH-31-AB-1234).' });
+  }
+
   // Validate spot is still available
   if (spotState[spotId]?.occupied) {
     return res.status(409).json({ status: 'ERROR', message: `Spot ${spotId} is already occupied.` });
