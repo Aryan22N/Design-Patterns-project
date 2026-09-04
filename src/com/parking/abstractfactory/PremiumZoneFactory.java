@@ -14,7 +14,7 @@ import com.parking.bridge.SmallSpot;
 public class PremiumZoneFactory extends ParkingSpotFactory {
     @Override
     public ParkingSpot createSmallSpot(String spotId) {
-        return new SmallSpot(spotId, new FlatRatePricing(), "Premium");
+        return new SmallSpot(spotId, new FlatRatePricing(50.0), "Premium");
     }
 
     @Override

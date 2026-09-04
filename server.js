@@ -90,9 +90,9 @@ function walkJavaSrc(dir) {
 
 /** Run a Java command, return parsed JSON result. */
 function runJava(args) {
-  const cmd = `"${JAVA}" -cp "${JAVA_OUT}" ${JAVA_MAIN} ${args.map(a => `"${a}"`).join(' ')}`;
+  const cmd = `"${JAVA}" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -cp "${JAVA_OUT}" ${JAVA_MAIN} ${args.map(a => `"${a}"`).join(' ')}`;
   try {
-    const raw = execSync(cmd, { stdio: 'pipe', timeout: 15000 }).toString().trim();
+    const raw = execSync(cmd, { stdio: 'pipe', timeout: 15000, encoding: 'utf8' }).trim();
     // Find the last line that looks like JSON
     const lines = raw.split('\n').filter(l => l.trim().startsWith('{'));
     const jsonLine = lines[lines.length - 1] || '{}';

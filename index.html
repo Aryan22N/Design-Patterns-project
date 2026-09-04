@@ -1205,7 +1205,12 @@ function buildBreakdownMini(mode, hrs, fee) {
 // startTimer / updateTimer removed — replaced by duration picker for demo
 
 function calcEstimate(mode, hours) {
-  if (mode === 'FlatRate') return 100;
+  if (mode === 'FlatRate') {
+    // Extract actual flat rate from booking's rateDescription e.g. "₹50 flat" → 50
+    const rd = state.booking?.rateDescription || '';
+    const match = rd.match(/[\d]+/);
+    return match ? parseFloat(match[0]) : 100;
+  }
   if (mode === 'Dynamic') {
     const surge = hours > 4 ? 1.5 : 1.0;
     return hours * 15 * surge;
