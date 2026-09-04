@@ -115,18 +115,18 @@ function runJava(args) {
 
 // Spot catalog matching Java Main.java SPOT_CATALOG
 const SPOT_CATALOG = [
-  { spotId: 'S-01', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50 flat'           },
-  { spotId: 'S-02', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50 flat'           },
-  { spotId: 'S-03', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'              },
-  { spotId: 'S-04', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'              },
-  { spotId: 'M-01', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100 flat'          },
-  { spotId: 'M-02', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100 flat'          },
-  { spotId: 'M-03', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'              },
-  { spotId: 'M-04', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'              },
-  { spotId: 'L-01', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)'  },
-  { spotId: 'L-02', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)'  },
-  { spotId: 'L-03', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'              },
-  { spotId: 'L-04', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'              },
+  { spotId: 'S-01', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr'             },
+  { spotId: 'S-02', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr'             },
+  { spotId: 'S-03', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'             },
+  { spotId: 'S-04', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'             },
+  { spotId: 'M-01', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr'            },
+  { spotId: 'M-02', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr'            },
+  { spotId: 'M-03', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
+  { spotId: 'M-04', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
+  { spotId: 'L-01', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)' },
+  { spotId: 'L-02', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)' },
+  { spotId: 'L-03', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
+  { spotId: 'L-04', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
 ];
 
 // spotId → { occupied: bool, ticketId: string|null }

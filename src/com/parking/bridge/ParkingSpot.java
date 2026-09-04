@@ -82,7 +82,7 @@ public abstract class ParkingSpot {
     /** Human-readable rate description for UI display. */
     public String getRateDescription() {
         switch (pricingMode) {
-            case "FlatRate": return "\u20b9" + (int) pricing.calcPrice(1) + " flat";
+            case "FlatRate": return "\u20b9" + (int) pricing.calcPrice(1) + "/hr";
             case "Dynamic":  return "\u20b9" + "15/hr (surge after 4h)";
             default:         return "\u20b9" + "20/hr";
         }

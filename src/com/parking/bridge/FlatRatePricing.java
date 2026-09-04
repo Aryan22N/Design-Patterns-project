@@ -3,7 +3,7 @@ package com.parking.bridge;
 public class FlatRatePricing implements PricingStrategy {
     private final double flatRate;
 
-    /** Creates a FlatRatePricing with the given fixed rate (e.g. 50.0 or 100.0). */
+    /** Creates a FlatRatePricing with the given per-hour rate (e.g. 50.0 → ₹50/hr for Small, 100.0 → ₹100/hr for Medium). */
     public FlatRatePricing(double flatRate) {
         this.flatRate = flatRate;
     }
@@ -15,6 +15,6 @@ public class FlatRatePricing implements PricingStrategy {
 
     @Override
     public double calcPrice(int hrs) {
-        return flatRate;
+        return flatRate * Math.max(hrs, 1);
     }
 }

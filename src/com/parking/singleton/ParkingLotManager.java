@@ -110,7 +110,7 @@ public class ParkingLotManager {
         for (ParkingObserver o : observers) {
             o.update(spotId, status);
             // Capture the observer class name for JSON output
-            observerLog.add(o.getClass().getSimpleName() + ": Spot " + spotId + " → " + status);
+            observerLog.add(o.getClass().getSimpleName() + ": Spot " + spotId + " \u2192 " + status);
         }
     }
 

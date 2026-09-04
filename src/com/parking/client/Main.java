@@ -20,6 +20,8 @@ import com.parking.abstractfactory.RegularZoneFactory;
 import com.parking.ticket.Ticket;
 import com.parking.vehicle.Vehicle;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +57,11 @@ public class Main {
     };
 
     public static void main(String[] args) {
+        // ── Force UTF-8 stdout so ₹ and other Unicode chars survive the pipe to Node.js on Windows
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        } catch (Exception ignored) {}
+
         if (args.length < 1) {
             printError("No command specified. Use QUERY_SPOTS | BOOK | EXIT | PAY");
             return;
