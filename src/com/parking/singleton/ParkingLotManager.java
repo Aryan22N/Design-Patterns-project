@@ -11,21 +11,12 @@ import com.parking.chain.GateOpenHandler;
 import com.parking.chain.PaymentValidationHandler;
 import com.parking.chain.SpotAvailabilityHandler;
 import com.parking.chain.VehicleTypeCheckHandler;
+import com.parking.database.SpotDAO;
 import com.parking.observer.ParkingObserver;
 import com.parking.bridge.ParkingSpot;
 import com.parking.ticket.Ticket;
 import com.parking.vehicle.Vehicle;
 
-/**
- * Singleton pattern.
- * Ensures only ONE instance of ParkingLotManager exists and
- * coordinates the whole system: registers spots, runs the entry
- * validation chain, issues tickets and notifies observers of the
- * updated spot status. Same instance is reused across every
- * entry/exit request.
- *
- * Enhanced: chainLog, findSpotsByVehicleSize() for UI integration.
- */
 public class ParkingLotManager {
 
     private static ParkingLotManager instance;
@@ -35,9 +26,9 @@ public class ParkingLotManager {
     private final List<String>          chainLog     = new ArrayList<>();
     private final List<String>          observerLog  = new ArrayList<>();
     private final EntryHandler          entryChain;
+    private final SpotDAO               spotDAO      = new SpotDAO();
 
     private ParkingLotManager() {
-        // Wire up the Chain of Responsibility once, at construction time.
         EntryHandler vehicleTypeCheck  = new VehicleTypeCheckHandler();
         EntryHandler spotAvailability  = new SpotAvailabilityHandler();
         EntryHandler paymentValidation = new PaymentValidationHandler();
@@ -57,19 +48,18 @@ public class ParkingLotManager {
         return instance;
     }
 
-    // ── Spot management ──────────────────────────────────────
+    public void loadSpotsFromDAO() {
+        List<ParkingSpot> loaded = spotDAO.getAllSpots();
+        if (!loaded.isEmpty()) {
+            spots.clear();
+            spots.addAll(loaded);
+        }
+    }
 
     public void registerSpot(ParkingSpot spot) {
         spots.add(spot);
     }
 
-    /**
-     * Returns spots compatible with a vehicle's size in the requested zone.
-     * Vehicle size rules (from Vehicle.getSize()):
-     *   1 (Bike)  → Small spot only
-     *   2 (Car)   → Medium spot only
-     *   3 (Truck) → Large spot only
-     */
     public List<ParkingSpot> findSpotsByVehicleSize(int vehicleSize, String zone) {
         return spots.stream()
             .filter(s -> {
@@ -80,7 +70,6 @@ public class ParkingLotManager {
                     case 2:  sizeOk = type.equals("medium"); break;
                     default: sizeOk = type.equals("large"); break;
                 }
-                // If zone is "any" or blank, skip zone filtering
                 boolean zoneOk = (zone == null || zone.isBlank() || zone.equalsIgnoreCase("any"))
                     || s.getZone().equalsIgnoreCase(zone);
                 return sizeOk && zoneOk;
@@ -88,7 +77,6 @@ public class ParkingLotManager {
             .collect(Collectors.toList());
     }
 
-    /** Finds the first free spot of a given type, e.g. "Compact". */
     public Optional<ParkingSpot> findFreeSpotByType(String type) {
         return spots.stream()
                 .filter(s -> s.getSpotType().equalsIgnoreCase(type) && !s.isOccupied())
@@ -99,8 +87,6 @@ public class ParkingLotManager {
         return spots;
     }
 
-    // ── Observer management ───────────────────────────────────
-
     public void registerObserver(ParkingObserver o) {
         observers.add(o);
     }
@@ -109,25 +95,33 @@ public class ParkingLotManager {
         observerLog.clear();
         for (ParkingObserver o : observers) {
             o.update(spotId, status);
-            // Capture the observer class name for JSON output
             observerLog.add(o.getClass().getSimpleName() + ": Spot " + spotId + " \u2192 " + status);
         }
     }
 
     public void notifySpotFreed(String spotId) {
+        // Update in-memory spot
+        spots.stream()
+             .filter(s -> s.getSpotId().equalsIgnoreCase(spotId) || s.getSpotId().replace("-", "").equalsIgnoreCase(spotId.replace("-", "")))
+             .findFirst()
+             .ifPresent(s -> s.release());
+
+        // Persist to MySQL Database via SpotDAO
+        spotDAO.updateSpotStatus(spotId, false);
+        // Also update unhyphenated ID if needed
+        spotDAO.updateSpotStatus(spotId.replace("-", ""), false);
+
         notifyObservers(spotId, "AVAILABLE");
     }
 
-    // ── Entry processing ──────────────────────────────────────
-
-    /**
-     * Runs the vehicle through the entry validation chain and,
-     * if every handler passes, issues a Ticket for the given spot.
-     */
     public Ticket processVehicleEntry(Vehicle v, ParkingSpot spot, boolean paymentMethodValid) {
         chainLog.clear();
         EntryRequest request = new EntryRequest(v, spot, paymentMethodValid);
         entryChain.handle(request);
+
+        // Update database spot status via SpotDAO
+        spotDAO.updateSpotStatus(spot.getSpotId(), true);
+        spotDAO.updateSpotStatus(spot.getSpotId().replace("-", ""), true);
 
         Ticket ticket = new Ticket(
             v.getLicensePlate(),
@@ -139,8 +133,6 @@ public class ParkingLotManager {
         notifyObservers(spot.getSpotId(), "OCCUPIED");
         return ticket;
     }
-
-    // ── Log accessors ─────────────────────────────────────────
 
     /** Returns chain-of-responsibility log lines captured during last entry. */
     public List<String> getChainLog()    { return chainLog; }

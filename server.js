@@ -1,20 +1,18 @@
 'use strict';
-const express    = require('express');
-const path       = require('path');
+const express = require('express');
+const path = require('path');
 const { execSync } = require('child_process');
-const fs         = require('fs');
+const fs = require('fs');
 
-const app  = express();
+const app = express();
 const PORT = 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// ─────────────────────────────────────────────────────────────
-// Java environment — auto-detect javac / java
-// ─────────────────────────────────────────────────────────────
-const JAVA_SRC  = path.join(__dirname, 'src');
-const JAVA_OUT  = path.join(__dirname, 'out');
+
+const JAVA_SRC = path.join(__dirname, 'src');
+const JAVA_OUT = path.join(__dirname, 'out');
 const JAVA_MAIN = 'com.parking.client.Main';
 
 function findJava() {
@@ -32,7 +30,7 @@ function findJava() {
     try {
       execSync(`"${c}" -version`, { stdio: 'pipe' });
       return c;
-    } catch (_) {}
+    } catch (_) { }
   }
   return null;
 }
@@ -52,21 +50,21 @@ function findJavac() {
     try {
       execSync(`"${c}" -version`, { stdio: 'pipe' });
       return c;
-    } catch (_) {}
+    } catch (_) { }
   }
   return null;
 }
 
-let JAVA  = findJava()  || 'java';
+let JAVA = findJava() || 'java';
 let JAVAC = findJavac() || 'javac';
 
-// ─────────────────────────────────────────────────────────────
-// Compile Java once on startup
-// ─────────────────────────────────────────────────────────────
+const JAVA_LIB = path.join(__dirname, 'lib');
+const CLASSPATH = fs.existsSync(JAVA_LIB) ? `"${JAVA_LIB}/*;${JAVA_OUT}"` : `"${JAVA_OUT}"`;
+
 function compileJava() {
   if (!fs.existsSync(JAVA_OUT)) fs.mkdirSync(JAVA_OUT, { recursive: true });
   const srcs = walkJavaSrc(JAVA_SRC).join(' ');
-  const cmd  = `"${JAVAC}" -d "${JAVA_OUT}" -sourcepath "${JAVA_SRC}" ${srcs}`;
+  const cmd = `"${JAVAC}" -d "${JAVA_OUT}" -cp ${CLASSPATH} -sourcepath "${JAVA_SRC}" ${srcs}`;
   console.log('[Java] Compiling…');
   try {
     execSync(cmd, { stdio: 'pipe' });
@@ -90,7 +88,8 @@ function walkJavaSrc(dir) {
 
 /** Run a Java command, return parsed JSON result. */
 function runJava(args) {
-  const cmd = `"${JAVA}" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -cp "${JAVA_OUT}" ${JAVA_MAIN} ${args.map(a => `"${a}"`).join(' ')}`;
+  const cmd = `"${JAVA}" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -cp ${CLASSPATH} ${JAVA_MAIN} ${args.map(a => `"${a}"`).join(' ')}`;
+
   try {
     const raw = execSync(cmd, { stdio: 'pipe', timeout: 15000, encoding: 'utf8' }).trim();
     // Find the last line that looks like JSON
@@ -103,7 +102,7 @@ function runJava(args) {
     // Try to parse stdout anyway
     const lines = stdout.split('\n').filter(l => l.trim().startsWith('{'));
     if (lines.length) {
-      try { return JSON.parse(lines[lines.length - 1]); } catch (_) {}
+      try { return JSON.parse(lines[lines.length - 1]); } catch (_) { }
     }
     throw new Error(stderr || e.message);
   }
@@ -115,18 +114,18 @@ function runJava(args) {
 
 // Spot catalog matching Java Main.java SPOT_CATALOG
 const SPOT_CATALOG = [
-  { spotId: 'S-01', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr'             },
-  { spotId: 'S-02', spotType: 'Small',  zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr'             },
-  { spotId: 'S-03', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'             },
-  { spotId: 'S-04', spotType: 'Small',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹10/hr'             },
-  { spotId: 'M-01', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr'            },
-  { spotId: 'M-02', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr'            },
-  { spotId: 'M-03', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
-  { spotId: 'M-04', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
-  { spotId: 'L-01', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)' },
-  { spotId: 'L-02', spotType: 'Large',  zone: 'Premium', pricingMode: 'Dynamic',  rate: '₹15/hr (surge >4h)' },
-  { spotId: 'L-03', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
-  { spotId: 'L-04', spotType: 'Large',  zone: 'Regular', pricingMode: 'Hourly',   rate: '₹20/hr'             },
+  { spotId: 'S-01', spotType: 'Small', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr' },
+  { spotId: 'S-02', spotType: 'Small', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹50/hr' },
+  { spotId: 'S-03', spotType: 'Small', zone: 'Regular', pricingMode: 'Hourly', rate: '₹10/hr' },
+  { spotId: 'S-04', spotType: 'Small', zone: 'Regular', pricingMode: 'Hourly', rate: '₹10/hr' },
+  { spotId: 'M-01', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr' },
+  { spotId: 'M-02', spotType: 'Medium', zone: 'Premium', pricingMode: 'FlatRate', rate: '₹100/hr' },
+  { spotId: 'M-03', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly', rate: '₹20/hr' },
+  { spotId: 'M-04', spotType: 'Medium', zone: 'Regular', pricingMode: 'Hourly', rate: '₹20/hr' },
+  { spotId: 'L-01', spotType: 'Large', zone: 'Premium', pricingMode: 'Dynamic', rate: '₹15/hr (surge >4h)' },
+  { spotId: 'L-02', spotType: 'Large', zone: 'Premium', pricingMode: 'Dynamic', rate: '₹15/hr (surge >4h)' },
+  { spotId: 'L-03', spotType: 'Large', zone: 'Regular', pricingMode: 'Hourly', rate: '₹20/hr' },
+  { spotId: 'L-04', spotType: 'Large', zone: 'Regular', pricingMode: 'Hourly', rate: '₹20/hr' },
 ];
 
 // spotId → { occupied: bool, ticketId: string|null }
@@ -139,9 +138,9 @@ const activeSessions = {};
 // Vehicle size rules (matches Java Vehicle.getSize())
 function vehicleSize(vehicleType) {
   switch ((vehicleType || '').toLowerCase()) {
-    case 'bike':  return 1;
+    case 'bike': return 1;
     case 'truck': return 3;
-    default:      return 2; // Car
+    default: return 2; // Car
   }
 }
 
@@ -164,26 +163,22 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', java: JAVA, javac:
 
 /**
  * GET /api/spots?vehicleType=Car&zone=Premium
- * Returns eligible spots with live availability from in-memory state.
+ * Returns eligible spots with live availability from MySQL database via Java CLI.
  */
 app.get('/api/spots', (req, res) => {
   const { vehicleType = 'Car', zone = 'any' } = req.query;
-  const vSize = vehicleSize(vehicleType);
-
-  const spots = SPOT_CATALOG
-    .filter(s => spotEligible(s, vSize, zone))
-    .map(s => ({
-      ...s,
-      available: !spotState[s.spotId]?.occupied,
-    }));
-
-  res.json({ vehicleType, zone, vehicleSize: vSize, eligibleSpots: spots });
+  try {
+    const data = runJava(['QUERY_SPOTS', vehicleType, zone]);
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ status: 'ERROR', message: e.message });
+  }
 });
 
 /**
  * POST /api/book
  * Body: { vehicleType, plate, zone, spotId, spotType, paymentMethod }
- * Runs Java BOOK command, updates in-memory state.
+ * Runs Java BOOK command, updates database & session state.
  */
 app.post('/api/book', async (req, res) => {
   const { vehicleType, plate, zone, spotId, spotType, paymentMethod } = req.body;
@@ -193,33 +188,25 @@ app.post('/api/book', async (req, res) => {
     return res.status(400).json({ status: 'ERROR', message: 'Invalid vehicle number format. Must be 4-15 alphanumeric characters (e.g. MH-31-AB-1234).' });
   }
 
-  // Validate spot is still available
-  if (spotState[spotId]?.occupied) {
-    return res.status(409).json({ status: 'ERROR', message: `Spot ${spotId} is already occupied.` });
-  }
-
   try {
     const result = runJava(['BOOK', vehicleType, plate, zone, spotId, spotType, paymentMethod || 'Card']);
 
-    if (result.status === 'ERROR') {
-      return res.status(400).json(result);
+    if (result.status === 'ERROR' || !result.ticketId) {
+      return res.status(400).json(result.status ? result : { status: 'ERROR', message: result.message || 'Booking failed' });
     }
-
-    // Mark spot occupied
-    spotState[spotId] = { occupied: true, ticketId: result.ticketId };
 
     // Save session
     activeSessions[result.ticketId] = {
-      ticketId:    result.ticketId,
-      plate,
-      vehicleType,
-      zone,
-      spotId,
-      spotType,
+      ticketId: result.ticketId,
+      plate: result.plate || plate,
+      vehicleType: result.vehicleType || vehicleType,
+      zone: result.zone || zone,
+      spotId: result.spotId || spotId,
+      spotType: result.spotType || spotType,
       paymentMethod: paymentMethod || 'Card',
-      pricingMode:   result.pricingMode,
+      pricingMode: result.pricingMode,
       rateDescription: result.rateDescription,
-      entryTime:     result.entryTime || new Date().toISOString(),
+      entryTime: result.entryTime || new Date().toISOString(),
     };
 
     res.json(result);

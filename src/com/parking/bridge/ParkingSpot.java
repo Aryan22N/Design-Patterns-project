@@ -3,14 +3,7 @@ package com.parking.bridge;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-/**
- * Bridge pattern - the "Abstraction" side.
- * Holds a reference to a PricingStrategy (the bridge) instead of
- * inheriting pricing behaviour, so spot type (Compact/EV/...) and
- * pricing model (Hourly/Flat/Dynamic) can be combined freely.
- *
- * Enhanced: zone + pricingMode fields for UI/JSON output.
- */
+
 public abstract class ParkingSpot {
     private final String spotId;
     protected PricingStrategy pricing;

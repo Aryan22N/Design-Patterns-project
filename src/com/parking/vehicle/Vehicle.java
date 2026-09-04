@@ -1,9 +1,5 @@
 package com.parking.vehicle;
 
-/**
- * Abstract product in the Factory Method pattern.
- * Represents any vehicle that can enter the parking lot.
- */
 public abstract class Vehicle {
     private final String licensePlate;
 
@@ -20,7 +16,6 @@ public abstract class Vehicle {
 
     public abstract String getType();
 
-    /** Rough size classification used later to pick a matching spot. */
     public abstract int getSize();
 
     @Override

@@ -7,10 +7,7 @@ import com.parking.bridge.MediumSpot;
 import com.parking.bridge.ParkingSpot;
 import com.parking.bridge.SmallSpot;
 
-/**
- * Concrete factory for the "Premium" zone: flat rate for small & medium
- * spots and surge/dynamic pricing for large spots.
- */
+
 public class PremiumZoneFactory extends ParkingSpotFactory {
     @Override
     public ParkingSpot createSmallSpot(String spotId) {

@@ -17,6 +17,9 @@ import com.parking.bridge.ParkingSpot;
 import com.parking.abstractfactory.ParkingSpotFactory;
 import com.parking.abstractfactory.PremiumZoneFactory;
 import com.parking.abstractfactory.RegularZoneFactory;
+import com.parking.database.SpotDAO;
+import com.parking.database.TicketDAO;
+import com.parking.database.VehicleDAO;
 import com.parking.ticket.Ticket;
 import com.parking.vehicle.Vehicle;
 
@@ -38,10 +41,7 @@ import java.util.Optional;
  */
 public class Main {
 
-    // ── Spot inventory (mirrors Node.js server state) ─────────
-    // Spot ID format: S=Small (Bike), M=Medium (Car), L=Large (Truck)
     private static final String[][] SPOT_CATALOG = {
-        // { spotId, spotType, zone }
         { "S-01", "Small",  "Premium" },
         { "S-02", "Small",  "Premium" },
         { "S-03", "Small",  "Regular" },
@@ -56,8 +56,11 @@ public class Main {
         { "L-04", "Large",  "Regular" },
     };
 
+    private static final VehicleDAO vehicleDAO = new VehicleDAO();
+    private static final TicketDAO  ticketDAO  = new TicketDAO();
+    private static final SpotDAO    spotDAO    = new SpotDAO();
+
     public static void main(String[] args) {
-        // ── Force UTF-8 stdout so ₹ and other Unicode chars survive the pipe to Node.js on Windows
         try {
             System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
         } catch (Exception ignored) {}
@@ -66,9 +69,6 @@ public class Main {
             printError("No command specified. Use QUERY_SPOTS | BOOK | EXIT | PAY");
             return;
         }
-
-        // Suppress all handler println → redirect to manager chain log
-        // (We redirect stdout by wrapping, but it is simpler to capture via log)
 
         String cmd = args[0].toUpperCase();
         try {
@@ -85,17 +85,12 @@ public class Main {
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // QUERY_SPOTS — return eligible spots for a vehicle type+zone
-    // args: [0]=QUERY_SPOTS [1]=vehicleType [2]=zone
-    // ─────────────────────────────────────────────────────────
     private static void handleQuerySpots(String[] args) {
         String vehicleType = args.length > 1 ? args[1] : "Car";
         String zone        = args.length > 2 ? args[2] : "any";
 
         int vehicleSize = resolveVehicleSize(vehicleType);
 
-        // Build and seed the manager
         ParkingLotManager mgr = buildSeededManager();
 
         List<ParkingSpot> eligible = mgr.findSpotsByVehicleSize(vehicleSize, zone);
@@ -121,10 +116,6 @@ public class Main {
         System.out.println(sb);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // BOOK — run chain, open gate, issue ticket
-    // args: [0]=BOOK [1]=vehicleType [2]=plate [3]=zone [4]=spotId [5]=spotType [6]=paymentMethod
-    // ─────────────────────────────────────────────────────────
     private static void handleBook(String[] args) {
         String vehicleType   = args[1];
         String plate         = args[2];
@@ -139,32 +130,42 @@ public class Main {
         VehicleFactory vf = resolveVehicleFactory(vehicleType);
         Vehicle vehicle = vf.createVehicle(plate);
 
-        // 2. Find the requested spot (with fallback for legacy spot IDs)
+        // 2. Find the requested spot
         ParkingSpot spot = resolveSpot(mgr, spotId);
 
         // 3. Run Chain of Responsibility + issue ticket
-        // Capture stdout from chain handlers via PrintStream redirect
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        java.io.PrintStream old = System.out;
-        System.setOut(new java.io.PrintStream(baos));
+        java.io.PrintStream originalOut = System.out;
+        String chainOutput = "";
+        String gateOutput = "";
+        Ticket ticket = null;
 
-        Ticket ticket = mgr.processVehicleEntry(vehicle, spot, true);
+        try {
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            System.setOut(new java.io.PrintStream(baos));
+            ticket = mgr.processVehicleEntry(vehicle, spot, true);
+            chainOutput = baos.toString().trim();
+        } finally {
+            System.setOut(originalOut);
+        }
 
-        System.setOut(old);
-        String chainOutput = baos.toString().trim();
+        // 4. Persist Vehicle & Ticket to MySQL Database
+        int vehicleId = vehicleDAO.getOrCreateVehicle(vehicle);
+        ticketDAO.saveTicket(ticket, vehicleId);
 
-        // 4. Run GateAccessProxy
+        // 5. Run GateAccessProxy
         PaymentMethod pm = resolvePaymentMethod(paymentMethod);
         RealGateSystem realGate = new RealGateSystem(pm, spot);
         GateAccessProxy gateProxy = new GateAccessProxy(realGate);
 
-        java.io.ByteArrayOutputStream baos2 = new java.io.ByteArrayOutputStream();
-        System.setOut(new java.io.PrintStream(baos2));
-        gateProxy.processEntry(ticket);
-        System.setOut(old);
-        String gateOutput = baos2.toString().trim();
+        try {
+            java.io.ByteArrayOutputStream baos2 = new java.io.ByteArrayOutputStream();
+            System.setOut(new java.io.PrintStream(baos2));
+            gateProxy.processEntry(ticket);
+            gateOutput = baos2.toString().trim();
+        } finally {
+            System.setOut(originalOut);
+        }
 
-        // 5. Build chain log from captured output
         String[] chainLines  = chainOutput.isEmpty()  ? new String[0] : chainOutput.split("\n");
         String[] gateLines   = gateOutput.isEmpty()   ? new String[0] : gateOutput.split("\n");
 
@@ -199,10 +200,6 @@ public class Main {
         System.out.println(sb);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // EXIT — compute fee, prepare for payment
-    // args: [0]=EXIT [1]=ticketId [2]=plate [3]=zone [4]=spotId [5]=spotType [6]=hoursParked
-    // ─────────────────────────────────────────────────────────
     private static void handleExit(String[] args) {
         String ticketId   = args[1];
         String plate      = args[2];
@@ -211,11 +208,14 @@ public class Main {
         String spotType   = args[5];
         int    hours      = Integer.parseInt(args[6]);
 
-        // Rebuild the spot to compute fee via its pricing strategy
         ParkingLotManager mgr  = buildSeededManager();
         ParkingSpot spot = resolveSpot(mgr, spotId);
 
+        // Compute fee via Strategy/Bridge pricing
         double fee = spot.calculateFee(hours);
+
+        // Persist exit details to MySQL database
+        ticketDAO.updateExitDetails(ticketId, fee);
 
         String feeBreakdown = buildFeeBreakdown(spot.getPricingMode(), hours, fee);
 
@@ -233,10 +233,6 @@ public class Main {
             + "}");
     }
 
-    // ─────────────────────────────────────────────────────────
-    // PAY — process payment, release spot, notify observers
-    // args: [0]=PAY [1]=ticketId [2]=plate [3]=vehicleType [4]=zone [5]=spotId [6]=spotType [7]=hoursParked [8]=paymentMethod
-    // ─────────────────────────────────────────────────────────
     private static void handlePay(String[] args) {
         String ticketId     = args[1];
         String plate        = args[2];
@@ -250,17 +246,14 @@ public class Main {
         ParkingLotManager mgr = buildSeededManager();
         ParkingSpot spot = resolveSpot(mgr, spotId);
 
-        // Re-create ticket to mark paid
         Ticket ticket = new Ticket(plate, vehicleType, spotId, zone, spot.getPricingMode());
         double fee = spot.calculateFee(hours);
         ticket.calculateFee(fee);
 
-        // Process payment via PaymentMethod strategy
         PaymentMethod pm = resolvePaymentMethod(paymentMethod);
         RealGateSystem realGate = new RealGateSystem(pm, spot);
         GateAccessProxy gateProxy = new GateAccessProxy(realGate);
 
-        // Redirect stdout to capture gate messages
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         java.io.PrintStream old = System.out;
         System.setOut(new java.io.PrintStream(baos));
@@ -270,6 +263,9 @@ public class Main {
         mgr.notifySpotFreed(spotId);
 
         System.setOut(old);
+
+        // Persist payment & update status in MySQL Database
+        ticketDAO.updatePaymentStatus(ticketId, fee, paymentMethod);
 
         String feeBreakdown = buildFeeBreakdown(spot.getPricingMode(), hours, fee);
 
@@ -297,18 +293,19 @@ public class Main {
         System.out.println(sb);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────
-
-    /** Builds and seeds the ParkingLotManager with all catalog spots. */
     private static ParkingLotManager buildSeededManager() {
         ParkingLotManager mgr = ParkingLotManager.getInstance();
-        // Observers
+
         if (mgr.getSpots().isEmpty()) {
             mgr.registerObserver(new DisplayBoard());
             mgr.registerObserver(new MobileAppNotifier());
-            // Seed spots from catalog
+        }
+
+        // Always sync spots & availability from MySQL database via SpotDAO
+        mgr.loadSpotsFromDAO();
+
+        // If MySQL table had no spots, seed using Abstract Factories
+        if (mgr.getSpots().isEmpty()) {
             ParkingSpotFactory premiumFactory = new PremiumZoneFactory();
             ParkingSpotFactory regularFactory = new RegularZoneFactory();
             for (String[] entry : SPOT_CATALOG) {
@@ -353,7 +350,7 @@ public class Main {
     }
 
     private static String buildFeeBreakdown(String pricingMode, int hours, double fee) {
-        String rs = "\u20b9"; // ₹ Rupee sign — safe Unicode escape
+        String rs = "\u20b9";
         switch (pricingMode) {
             case "FlatRate":
                 return "Flat rate: " + rs + String.format("%.2f", fee);
@@ -367,19 +364,18 @@ public class Main {
 
     private static ParkingSpot resolveSpot(ParkingLotManager mgr, String spotId) {
         Optional<ParkingSpot> exact = mgr.getSpots().stream()
-            .filter(s -> s.getSpotId().equalsIgnoreCase(spotId))
+            .filter(s -> s.getSpotId().equalsIgnoreCase(spotId) || s.getSpotId().replace("-", "").equalsIgnoreCase(spotId.replace("-", "")))
             .findFirst();
         if (exact.isPresent()) return exact.get();
 
-        // Fallback for legacy spot IDs (e.g. L-R01, C-P01) to prevent errors
         String sid = spotId.toUpperCase();
-        if (sid.contains("C-") || sid.contains("S-")) {
+        if (sid.contains("C-") || sid.contains("S-") || sid.startsWith("S")) {
             return mgr.getSpots().stream().filter(s -> s.getSpotType().equalsIgnoreCase("Small")).findFirst().orElse(mgr.getSpots().get(0));
         }
-        if (sid.contains("M-")) {
+        if (sid.contains("M-") || sid.startsWith("M")) {
             return mgr.getSpots().stream().filter(s -> s.getSpotType().equalsIgnoreCase("Medium")).findFirst().orElse(mgr.getSpots().get(0));
         }
-        if (sid.contains("L-") || sid.contains("EV-")) {
+        if (sid.contains("L-") || sid.contains("EV-") || sid.startsWith("L")) {
             return mgr.getSpots().stream().filter(s -> s.getSpotType().equalsIgnoreCase("Large")).findFirst().orElse(mgr.getSpots().get(0));
         }
         return mgr.getSpots().get(0);
