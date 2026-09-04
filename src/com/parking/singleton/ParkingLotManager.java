@@ -91,7 +91,7 @@ public class ParkingLotManager {
         observers.add(o);
     }
 
-    public void notifyObservers(String spotId, String status) {
+    public synchronized void notifyObservers(String spotId, String status) {
         observerLog.clear();
         for (ParkingObserver o : observers) {
             o.update(spotId, status);
@@ -99,7 +99,7 @@ public class ParkingLotManager {
         }
     }
 
-    public void notifySpotFreed(String spotId) {
+    public synchronized void notifySpotFreed(String spotId) {
         // Update in-memory spot
         spots.stream()
              .filter(s -> s.getSpotId().equalsIgnoreCase(spotId) || s.getSpotId().replace("-", "").equalsIgnoreCase(spotId.replace("-", "")))
@@ -108,20 +108,20 @@ public class ParkingLotManager {
 
         // Persist to MySQL Database via SpotDAO
         spotDAO.updateSpotStatus(spotId, false);
-        // Also update unhyphenated ID if needed
-        spotDAO.updateSpotStatus(spotId.replace("-", ""), false);
 
         notifyObservers(spotId, "AVAILABLE");
     }
 
-    public Ticket processVehicleEntry(Vehicle v, ParkingSpot spot, boolean paymentMethodValid) {
+    public synchronized Ticket processVehicleEntry(Vehicle v, ParkingSpot spot, boolean paymentMethodValid) {
         chainLog.clear();
         EntryRequest request = new EntryRequest(v, spot, paymentMethodValid);
         entryChain.handle(request);
 
+        // Occupy in-memory spot
+        spot.occupy();
+
         // Update database spot status via SpotDAO
         spotDAO.updateSpotStatus(spot.getSpotId(), true);
-        spotDAO.updateSpotStatus(spot.getSpotId().replace("-", ""), true);
 
         Ticket ticket = new Ticket(
             v.getLicensePlate(),
@@ -135,13 +135,13 @@ public class ParkingLotManager {
     }
 
     /** Returns chain-of-responsibility log lines captured during last entry. */
-    public List<String> getChainLog()    { return chainLog; }
+    public synchronized List<String> getChainLog()    { return new ArrayList<>(chainLog); }
 
     /** Returns observer notification log lines from last notify call. */
-    public List<String> getObserverLog() { return observerLog; }
+    public synchronized List<String> getObserverLog() { return new ArrayList<>(observerLog); }
 
     /** Append a message to the chain log (called by handler subclasses). */
-    public void logChain(String msg) {
+    public synchronized void logChain(String msg) {
         chainLog.add(msg);
     }
 }
