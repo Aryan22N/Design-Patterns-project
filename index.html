@@ -1042,7 +1042,11 @@ function selectZone(zone) {
 
 async function findSpots() {
   state.plate = document.getElementById('plate-input').value.trim();
-  if (!state.plate) { showToast('Please enter your license plate number.', true); return; }
+  const plateRegex = /^[A-Z0-9 -]{4,15}$/i;
+  if (!state.plate || !plateRegex.test(state.plate)) {
+    showToast('Please enter a valid vehicle number (4–15 alphanumeric characters, e.g. MH-31-AB-1234).', true);
+    return;
+  }
 
   showLoading('Querying backend…', 'Filtering spots by vehicle size & zone');
   try {

@@ -8,7 +8,10 @@ public abstract class Vehicle {
     private final String licensePlate;
 
     protected Vehicle(String licensePlate) {
-        this.licensePlate = licensePlate;
+        if (licensePlate == null || !licensePlate.trim().matches("^[A-Za-z0-9 -]{4,15}$")) {
+            throw new IllegalArgumentException("Invalid vehicle number format: " + licensePlate);
+        }
+        this.licensePlate = licensePlate.trim().toUpperCase();
     }
 
     public String getLicensePlate() {
