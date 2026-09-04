@@ -11,11 +11,19 @@ public class DatabaseConnection {
 
     private static volatile DatabaseConnection instance;
 
-    private final String url      = "jdbc:mysql://localhost:3306/smart_parking_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-    private final String username = "root";
-    private final String password = "root";
+    private final String url;
+    private final String username;
+    private final String password;
 
     private DatabaseConnection() {
+        String envUrl  = System.getenv("DB_URL");
+        String envUser = System.getenv("DB_USER");
+        String envPass = System.getenv("DB_PASS");
+
+        this.url      = (envUrl != null && !envUrl.isBlank()) ? envUrl : "jdbc:mysql://localhost:3306/smart_parking_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+        this.username = (envUser != null) ? envUser : "root";
+        this.password = (envPass != null) ? envPass : "root";
+
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {

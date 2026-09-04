@@ -88,7 +88,8 @@ function walkJavaSrc(dir) {
 
 /** Run a Java command, return parsed JSON result. */
 function runJava(args) {
-  const cmd = `"${JAVA}" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -cp ${CLASSPATH} ${JAVA_MAIN} ${args.map(a => `"${a}"`).join(' ')}`;
+  const safeArgs = args.map(a => `"${String(a).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(' ');
+  const cmd = `"${JAVA}" -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -cp ${CLASSPATH} ${JAVA_MAIN} ${safeArgs}`;
 
   try {
     const raw = execSync(cmd, { stdio: 'pipe', timeout: 15000, encoding: 'utf8' }).trim();
@@ -193,6 +194,12 @@ app.post('/api/book', async (req, res) => {
 
     if (result.status === 'ERROR' || !result.ticketId) {
       return res.status(400).json(result.status ? result : { status: 'ERROR', message: result.message || 'Booking failed' });
+    }
+
+    // Update Node.js spot availability state
+    const targetSpotId = result.spotId || spotId;
+    if (targetSpotId && spotState[targetSpotId]) {
+      spotState[targetSpotId] = { occupied: true, ticketId: result.ticketId };
     }
 
     // Save session

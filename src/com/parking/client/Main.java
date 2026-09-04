@@ -144,8 +144,16 @@ public class Main {
             System.setOut(new java.io.PrintStream(baos));
             ticket = mgr.processVehicleEntry(vehicle, spot, true);
             chainOutput = baos.toString().trim();
+        } catch (Exception e) {
+            printError(e.getMessage());
+            return;
         } finally {
             System.setOut(originalOut);
+        }
+
+        if (ticket == null) {
+            printError("Failed to issue ticket for spot " + spotId);
+            return;
         }
 
         // 4. Persist Vehicle & Ticket to MySQL Database
@@ -162,6 +170,8 @@ public class Main {
             System.setOut(new java.io.PrintStream(baos2));
             gateProxy.processEntry(ticket);
             gateOutput = baos2.toString().trim();
+        } catch (Exception e) {
+            // Log gate exception if any
         } finally {
             System.setOut(originalOut);
         }
