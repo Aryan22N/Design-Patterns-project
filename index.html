@@ -389,6 +389,10 @@
         const res = await fetch(`/api/spots?vehicleType=${state.vehicleType}&zone=${state.zone}`);
         const data = await res.json();
         hideLoading();
+        if (!res.ok || data.status === 'ERROR') {
+          showToast(data.message || 'Error querying spots', true);
+          return;
+        }
         renderSpotGrid(data);
         goTo(2);
       } catch (e) {
@@ -530,34 +534,35 @@
     }
 
     function buildBreakdownMini(mode, hrs, fee) {
+      const rd = state.booking?.rateDescription || '';
+      const match = rd.match(/[\d]+/);
+      const ratePerHr = match ? parseFloat(match[0]) : 50;
+
       if (mode === 'FlatRate') {
-        const rd = state.booking?.rateDescription || '';
-        const match = rd.match(/[\d]+/);
-        const ratePerHr = match ? parseFloat(match[0]) : 50;
         return `${hrs}h × ₹${ratePerHr}/hr = ₹${fee.toFixed(2)}`;
       }
       if (mode === 'Dynamic') {
         const surge = hrs > 4 ? 1.5 : 1.0;
         return `${hrs}h × ₹15/hr${surge > 1 ? ' × 1.5× surge (>4h)' : ''} = ₹${fee.toFixed(2)}`;
       }
-      return `${hrs}h × ₹20/hr = ₹${fee.toFixed(2)}`;
+      return `${hrs}h × ₹${ratePerHr}/hr = ₹${fee.toFixed(2)}`;
     }
 
     // startTimer / updateTimer removed — replaced by duration picker for demo
 
     function calcEstimate(mode, hours) {
+      const rd = state.booking?.rateDescription || '';
+      const match = rd.match(/[\d]+/);
+      const ratePerHr = match ? parseFloat(match[0]) : 50;
+
       if (mode === 'FlatRate') {
-        // Extract per-hour rate from rateDescription e.g. "₹50/hr" → 50
-        const rd = state.booking?.rateDescription || '';
-        const match = rd.match(/[\d]+/);
-        const ratePerHr = match ? parseFloat(match[0]) : 50;
         return ratePerHr * Math.max(hours, 1);
       }
       if (mode === 'Dynamic') {
         const surge = hours > 4 ? 1.5 : 1.0;
         return hours * 15 * surge;
       }
-      return hours * 20;
+      return hours * ratePerHr;
     }
 
     // ── Step 4 — Exit & compute fee ───────────────────────────────
