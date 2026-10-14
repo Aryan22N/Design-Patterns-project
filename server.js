@@ -169,6 +169,15 @@ app.get('/api/spots', (req, res) => {
   const { vehicleType = 'Car', zone = 'any' } = req.query;
   try {
     const data = runJava(['QUERY_SPOTS', vehicleType, zone]);
+    if (data && data.eligibleSpots) {
+      data.eligibleSpots = data.eligibleSpots.map(s => {
+        const isOccupiedInServer = spotState[s.spotId] && spotState[s.spotId].occupied;
+        return {
+          ...s,
+          available: !isOccupiedInServer && s.available,
+        };
+      });
+    }
     res.json(data);
   } catch (e) {
     res.status(500).json({ status: 'ERROR', message: e.message });
@@ -176,12 +185,43 @@ app.get('/api/spots', (req, res) => {
 });
 
 /**
+ * GET /api/sessions
+ * Returns all currently active parked vehicle sessions.
+ */
+app.get('/api/sessions', (req, res) => {
+  res.json(Object.values(activeSessions));
+});
+
+/**
+ * GET /api/lot
+ * Returns status of all spots in the lot with occupancy info.
+ */
+app.get('/api/lot', (req, res) => {
+  const lot = SPOT_CATALOG.map(s => {
+    const state = spotState[s.spotId] || { occupied: false, ticketId: null };
+    const session = state.ticketId ? activeSessions[state.ticketId] : null;
+    return {
+      ...s,
+      occupied: state.occupied,
+      ticketId: state.ticketId,
+      plate: session ? session.plate : null,
+      vehicleType: session ? session.vehicleType : null,
+      entryTime: session ? session.entryTime : null,
+      durationHours: session ? session.durationHours : null,
+    };
+  });
+  res.json({ spots: lot, total: SPOT_CATALOG.length, occupiedCount: Object.keys(activeSessions).length });
+});
+
+
+/**
  * POST /api/book
- * Body: { vehicleType, plate, zone, spotId, spotType, paymentMethod }
+ * Body: { vehicleType, plate, zone, spotId, spotType, paymentMethod, durationHours }
  * Runs Java BOOK command, updates database & session state.
  */
 app.post('/api/book', async (req, res) => {
-  const { vehicleType, plate, zone, spotId, spotType, paymentMethod } = req.body;
+  const { vehicleType, plate, zone, spotId, spotType, paymentMethod, durationHours } = req.body;
+  const intendedHours = Math.max(1, Math.min(24, Number(durationHours) || 5));
 
   // Validate vehicle number format
   if (!plate || !/^[A-Z0-9 -]{4,15}$/i.test(plate.trim())) {
@@ -195,6 +235,8 @@ app.post('/api/book', async (req, res) => {
       return res.status(400).json(result.status ? result : { status: 'ERROR', message: result.message || 'Booking failed' });
     }
 
+    result.durationHours = intendedHours;
+
     // Save session
     activeSessions[result.ticketId] = {
       ticketId: result.ticketId,
@@ -207,7 +249,14 @@ app.post('/api/book', async (req, res) => {
       pricingMode: result.pricingMode,
       rateDescription: result.rateDescription,
       entryTime: result.entryTime || new Date().toISOString(),
+      durationHours: intendedHours,
     };
+
+    // Update spot state
+    const bookedSpotId = result.spotId || spotId;
+    if (bookedSpotId && spotState[bookedSpotId]) {
+      spotState[bookedSpotId] = { occupied: true, ticketId: result.ticketId };
+    }
 
     res.json(result);
   } catch (e) {

@@ -28,13 +28,16 @@ This project is primarily built to demonstrate the practical use of **Design Pat
 
 | Design Pattern | Implementation | Purpose |
 |---|---|---|
-| 🟣 **Singleton** | `ParkingLotManager` | Ensures a single parking lot manager instance |
+| 🟣 **Singleton** | `ParkingLotManager`, `DatabaseConnection` | Ensures a single manager and DB connection instance |
 | 🟢 **Factory Method** | `VehicleFactory` | Creates different vehicle types |
 | 🟠 **Abstract Factory** | `ParkingSpotFactory` | Creates families of parking spots |
 | 🔵 **Bridge** | `ParkingSpot` + `PricingStrategy` | Separates parking spots from pricing |
 | 🔴 **Chain of Responsibility** | Entry Handlers | Processes vehicle entry step-by-step |
 | 🟡 **Observer** | `ParkingObserver` | Notifies systems about parking status changes |
 | 🟢 **Proxy** | `GateAccessProxy` | Controls access to the real gate system |
+| 📜 **Template Method** | `ParkingExitWorkflow` | Standardizes invariant exit & billing algorithm with hooks |
+| 💡 **Strategy** | `PricingStrategy`, `PaymentMethod` | Interchangable pricing and payment algorithms |
+| 🔨 **Builder** | `ParkingReservation.Builder`, `ReservationDirector` | Constructs multi-attribute reservations fluently with validation |
 
 ---
 

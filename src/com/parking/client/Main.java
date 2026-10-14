@@ -22,6 +22,11 @@ import com.parking.database.TicketDAO;
 import com.parking.database.VehicleDAO;
 import com.parking.ticket.Ticket;
 import com.parking.vehicle.Vehicle;
+import com.parking.template.ExitResult;
+import com.parking.template.ParkingExitWorkflow;
+import com.parking.template.PremiumZoneExitWorkflow;
+import com.parking.template.RegularExitWorkflow;
+import com.parking.builder.ParkingReservation;
 
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -58,7 +63,6 @@ public class Main {
 
     private static final VehicleDAO vehicleDAO = new VehicleDAO();
     private static final TicketDAO  ticketDAO  = new TicketDAO();
-    private static final SpotDAO    spotDAO    = new SpotDAO();
 
     public static void main(String[] args) {
         try {
@@ -123,15 +127,24 @@ public class Main {
         String spotId        = args[4];
         String spotType      = args[5];
         String paymentMethod = args[6];
+        String promoCode     = args.length > 7 ? args[7] : "";
+
+        // Construct reservation using the Builder Pattern
+        ParkingReservation reservation = new ParkingReservation.Builder(plate, vehicleType)
+                .inZone(zone)
+                .forSpot(spotId, spotType)
+                .withPaymentMethod(paymentMethod)
+                .withPromoCode(promoCode)
+                .build();
 
         ParkingLotManager mgr = buildSeededManager();
 
-        // 1. Create vehicle via Factory Method
-        VehicleFactory vf = resolveVehicleFactory(vehicleType);
-        Vehicle vehicle = vf.createVehicle(plate);
+        // 1. Create vehicle via Factory Method using reservation specs
+        VehicleFactory vf = resolveVehicleFactory(reservation.getVehicleType());
+        Vehicle vehicle = vf.createVehicle(reservation.getLicensePlate());
 
         // 2. Find the requested spot
-        ParkingSpot spot = resolveSpot(mgr, spotId);
+        ParkingSpot spot = resolveSpot(mgr, reservation.getSpotId());
 
         // 3. Run Chain of Responsibility + issue ticket
         java.io.PrintStream originalOut = System.out;
@@ -181,6 +194,7 @@ public class Main {
           .append("\"pricingMode\":\"").append(spot.getPricingMode()).append("\",")
           .append("\"rateDescription\":\"").append(spot.getRateDescription()).append("\",")
           .append("\"entryTime\":\"").append(ticket.getEntryTime()).append("\",")
+          .append("\"reservation\":").append(reservation.toJson()).append(",")
           .append("\"chainLog\":[");
         for (int i = 0; i < chainLines.length; i++) {
             if (i > 0) sb.append(",");
@@ -247,22 +261,22 @@ public class Main {
         ParkingSpot spot = resolveSpot(mgr, spotId);
 
         Ticket ticket = new Ticket(plate, vehicleType, spotId, zone, spot.getPricingMode());
-        double fee = spot.calculateFee(hours);
-        ticket.calculateFee(fee);
-
         PaymentMethod pm = resolvePaymentMethod(paymentMethod);
-        RealGateSystem realGate = new RealGateSystem(pm, spot);
-        GateAccessProxy gateProxy = new GateAccessProxy(realGate);
+
+        // Execute exit algorithm via Template Method Pattern
+        ParkingExitWorkflow workflow = "Premium".equalsIgnoreCase(zone)
+            ? new PremiumZoneExitWorkflow()
+            : new RegularExitWorkflow();
 
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         java.io.PrintStream old = System.out;
         System.setOut(new java.io.PrintStream(baos));
 
-        realGate.collectPayment(ticket, fee);
-        gateProxy.processExit(ticket);
-        mgr.notifySpotFreed(spotId);
+        ExitResult exitResult = workflow.executeExit(ticket, spot, hours, pm, mgr);
 
         System.setOut(old);
+
+        double fee = exitResult.getFinalFee();
 
         // Persist payment & update status in MySQL Database
         ticketDAO.updatePaymentStatus(ticketId, fee, paymentMethod);

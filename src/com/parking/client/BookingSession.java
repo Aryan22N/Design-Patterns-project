@@ -20,7 +20,6 @@ import java.util.Map;
 public class BookingSession {
 
     private static final BookingSession INSTANCE = new BookingSession();
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public static BookingSession getInstance() { return INSTANCE; }
 
