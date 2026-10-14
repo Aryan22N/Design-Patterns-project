@@ -3,7 +3,6 @@ package com.parking.ticket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Data object produced on vehicle entry and consumed on exit.
@@ -14,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Ticket {
 
-    private static final AtomicInteger COUNTER = new AtomicInteger(1);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter DISPLAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
@@ -31,7 +29,8 @@ public class Ticket {
     private String paymentMethod;
 
     public Ticket(String vehiclePlate, String vehicleType, String spotId, String zone, String pricingMode) {
-        this.ticketId     = "TKT-" + LocalDateTime.now().format(FMT) + "-" + String.format("%03d", COUNTER.getAndIncrement());
+        long seq = (System.currentTimeMillis() % 100000);
+        this.ticketId     = "TKT-" + LocalDateTime.now().format(FMT) + "-" + String.format("%05d", seq);
         this.vehiclePlate = vehiclePlate;
         this.vehicleType  = vehicleType;
         this.spotId       = spotId;

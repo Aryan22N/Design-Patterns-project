@@ -1,6 +1,5 @@
 package com.parking.abstractfactory;
 
-import com.parking.bridge.DynamicPricing;
 import com.parking.bridge.FlatRatePricing;
 import com.parking.bridge.LargeSpot;
 import com.parking.bridge.MediumSpot;
